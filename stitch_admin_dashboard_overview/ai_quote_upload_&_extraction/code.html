@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Teklif Yükleme ve Veri Çıkarımı</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ai-glow {
+            box-shadow: 0 0 15px rgba(19, 236, 91, 0.2);
+        }
+        .scanning-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #13ec5b, transparent);
+            animation: scan 2s infinite linear;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#111813] dark:text-white">
+<div class="layout-container flex flex-col h-full min-h-screen">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e5e7eb] dark:border-white/10 px-6 py-3 bg-white dark:bg-black/20">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-[#111813] dark:text-white">
+<div class="size-6 text-primary">
+<span class="material-symbols-outlined text-3xl">auto_awesome</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">QuoteAI Kurumsal</h2>
+</div>
+<div class="hidden md:flex items-center gap-9">
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Panel</a>
+<a class="text-sm font-bold border-b-2 border-primary leading-normal" href="#">Teklifler</a>
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Raporlama</a>
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Ayarlar</a>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<label class="hidden lg:flex flex-col min-w-40 h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-[#f0f4f2] dark:bg-white/5">
+<div class="text-[#61896f] flex items-center justify-center pl-4 rounded-l-lg">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 h-full placeholder:text-[#61896f] px-4 pl-2 text-sm" placeholder="Tekliflerde ara..."/>
+</div>
+</label>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined cursor-pointer">notifications</span>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border border-primary/20" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBs8_n7ckmAHC67qlGGvzVSJh8KubgBVKsRQhyBRpZBm09Zt0G0fWb91ILOkVujJcUuObC5i-ALyTh-S7BsKAeSfXHvfy0SNWOnmW1QcgPwgeyJKy1yaf5of3khaoouOFYoFY87AzDHdaJAmtZvr_jA5y22S6eoBCCd42mToQWowAK0lc4BOqnzNeruASgmQhivxbXPg1llVcXb0bk93JAYxmyum_4PRFIB_vUzQF_Lup1fHThtNGlKuBu6oF3DiZ5vfe4CN_2ikO-8");'></div>
+</div>
+</div>
+</header>
+<div class="flex flex-1">
+<aside class="hidden lg:flex w-64 flex-col justify-between border-r border-[#e5e7eb] dark:border-white/10 bg-white dark:bg-black/10 p-4">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col mb-4">
+<h1 class="text-base font-bold leading-normal">Teklif Yöneticisi</h1>
+<p class="text-[#61896f] text-xs font-normal leading-normal">Yapay Zeka Destekli Veri Çıkarımı</p>
+</div>
+<nav class="flex flex-col gap-2">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">upload_file</span>
+<p class="text-sm font-bold leading-normal">Yeni Yükleme</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<p class="text-sm font-medium leading-normal">Geçmiş</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined">monitoring</span>
+<p class="text-sm font-medium leading-normal">Analitik</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined">description</span>
+<p class="text-sm font-medium leading-normal">Şablonlar</p>
+</div>
+</nav>
+</div>
+</aside>
+<main class="flex-1 p-6 md:px-10 overflow-y-auto">
+<div class="flex flex-wrap justify-between items-end gap-3 mb-8">
+<div class="flex flex-col gap-1">
+<p class="text-3xl font-black leading-tight tracking-[-0.033em]">Teklif Yükleme ve Veri Çıkarımı</p>
+<p class="text-[#61896f] text-base font-normal">PDF dosyalarındaki kalemleri anında çıkarın ve doğrulayın.</p>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+<span class="material-symbols-outlined text-primary text-sm">bolt</span>
+<span class="text-xs font-bold text-primary uppercase tracking-wider">Yapay Zeka Motoru Aktif</span>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+<div class="xl:col-span-5 flex flex-col gap-6">
+<div class="flex flex-col bg-white dark:bg-white/5 rounded-xl border-2 border-dashed border-[#dbe6df] dark:border-white/10 p-8 items-center justify-center gap-4 group hover:border-primary transition-colors cursor-pointer">
+<div class="size-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">cloud_upload</span>
+</div>
+<div class="text-center">
+<p class="text-lg font-bold">Teklif PDF'ini Sürükle ve Bırak</p>
+<p class="text-sm text-[#61896f]">veya <span class="text-primary font-bold">Dosyalara Göz At</span> (Maks 10MB)</p>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 rounded-xl border border-[#e5e7eb] dark:border-white/10 p-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Mevcut İşlem</h3>
+<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold">İŞLENİYOR</span>
+</div>
+<div class="flex gap-4 items-center">
+<div class="relative size-20 rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 flex items-center justify-center">
+<span class="material-symbols-outlined text-4xl text-gray-400">picture_as_pdf</span>
+<div class="absolute inset-0 scanning-line w-full"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<p class="text-sm font-bold">teklif_A482_lojiistik_cozumler.pdf</p>
+<p class="text-xs text-primary font-bold">78%</p>
+</div>
+<div class="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full ai-glow" style="width: 78%"></div>
+</div>
+<p class="text-[10px] text-[#61896f] mt-2 uppercase tracking-widest font-bold">Kalemler ve vergi verileri çıkarılıyor...</p>
+</div>
+</div>
+</div>
+<div class="bg-[#f0f4f2] dark:bg-white/5 rounded-xl p-6">
+<h4 class="text-sm font-bold mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">verified</span>
+                            Son Başarılı Çıkarımlar
+                        </h4>
+<div class="space-y-3">
+<div class="flex justify-between text-xs items-center p-2 rounded bg-white dark:bg-white/5">
+<span>Q-88219 (TechCorp)</span>
+<span class="text-[#61896f]">$12,400.00</span>
+</div>
+<div class="flex justify-between text-xs items-center p-2 rounded bg-white dark:bg-white/5">
+<span>Q-88220 (Lumina Ltd)</span>
+<span class="text-[#61896f]">$4,250.00</span>
+</div>
+</div>
+</div>
+</div>
+<div class="xl:col-span-7">
+<div class="bg-white dark:bg-white/5 rounded-xl border border-[#e5e7eb] dark:border-white/10 p-8">
+<div class="flex items-center justify-between mb-6 border-b border-gray-100 dark:border-white/10 pb-4">
+<div>
+<h2 class="text-xl font-bold">Çıkarılan Veriler</h2>
+<p class="text-sm text-[#61896f]">Kaydetmeden önce yapay zeka sonuçlarını doğrulayın.</p>
+</div>
+<button class="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+</div>
+<form class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold">Bölüm</label>
+<select class="form-select bg-[#f0f4f2] dark:bg-white/5 border-none rounded-lg text-sm focus:ring-primary h-11">
+<option>Lojistik &amp; Tedarik Zinciri</option>
+<option>Operasyon</option>
+<option>Satın Alma</option>
+<option>BT Hizmetleri</option>
+</select>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold">Teklif No</label>
+<div class="relative">
+<input class="form-input w-full bg-gray-50 dark:bg-white/10 border-none rounded-lg text-sm text-[#61896f] h-11 cursor-not-allowed" readonly="" type="text" value="Q-88221-AI"/>
+<span class="absolute right-3 top-3 text-[10px] bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded font-bold uppercase">Oto</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold">Tarih</label>
+<input class="form-input bg-[#f0f4f2] dark:bg-white/5 border-none rounded-lg text-sm focus:ring-primary h-11" type="date" value="2023-10-24"/>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<label class="text-sm font-bold">Müşteri Adı</label>
+<span class="text-[10px] text-primary font-black flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] fill-1">check_circle</span> 
+                                            98% EŞLEŞME
+                                        </span>
+</div>
+<input class="form-input bg-primary/5 border border-primary/20 rounded-lg text-sm focus:ring-primary h-11" type="text" value="Global Lojistik Çözümleri"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold">İlgili Kişi</label>
+<input class="form-input bg-[#f0f4f2] dark:bg-white/5 border-none rounded-lg text-sm focus:ring-primary h-11" type="text" value="Selin Yılmaz"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold">Satış Temsilcisi</label>
+<input class="form-input bg-[#f0f4f2] dark:bg-white/5 border-none rounded-lg text-sm focus:ring-primary h-11" type="text" value="Can Demir"/>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-bold">İş Açıklaması</label>
+<textarea class="form-textarea bg-[#f0f4f2] dark:bg-white/5 border-none rounded-lg text-sm focus:ring-primary" rows="3">Avrupa bölgesi için gümrükleme ve kapıdan kapıya teslimat hizmetlerini içeren yıllık navlun sözleşmesi (2023 Ç4 - 2024 Ç4).</textarea>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-[#f0f4f2] dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-wider text-[#61896f]">Tutar</label>
+<input class="form-input bg-white dark:bg-black/20 border-none rounded-lg text-lg font-bold h-12" type="text" value="15.400,00"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-wider text-[#61896f]">Para Birimi</label>
+<select class="form-select bg-white dark:bg-black/20 border-none rounded-lg text-sm font-bold h-12">
+<option>EUR</option>
+<option selected="">USD</option>
+<option>GBP</option>
+<option>TRY</option>
+</select>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-xs font-bold uppercase tracking-wider text-primary">USD Karşılığı</label>
+<div class="flex items-center h-12 px-4 bg-primary/10 rounded-lg border border-primary/20 text-lg font-black text-[#111813] dark:text-white">
+                                        $15,400.00
+                                    </div>
+</div>
+</div>
+<div class="flex justify-end gap-4 pt-6 border-t border-gray-100 dark:border-white/10">
+<button class="px-6 py-3 text-sm font-bold text-[#61896f] hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors" type="button">
+                                    Vazgeç
+                                </button>
+<button class="flex items-center gap-2 px-8 py-3 bg-primary text-black text-sm font-black rounded-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined">save</span>
+                                    Teklifi Kaydet
+                                </button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+</body></html>

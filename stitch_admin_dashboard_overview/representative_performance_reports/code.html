@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Temsilci Performans Raporları - QuoteAI Enterprise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        .gauge-container {
+            position: relative;
+            width: 100px;
+            height: 50px;
+            overflow: hidden;
+        }
+        .gauge-bg {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 10px solid #f0f4f2;
+        }
+        .gauge-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 10px solid #13ec5b;
+            border-bottom-color: transparent;
+            border-left-color: transparent;
+            transform: rotate(-45deg);
+        }
+        .pie-chart {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #13ec5b 0% 65%,
+                #f0f4f2 65% 85%,
+                #111813 85% 100%
+            );
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#111813] dark:text-white min-h-screen">
+<header class="sticky top-0 z-50 bg-white dark:bg-background-dark border-b border-solid border-[#f0f4f2] dark:border-white/10 px-4 md:px-10 lg:px-40 py-3">
+<div class="flex items-center justify-between whitespace-nowrap">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-[#111813] dark:text-primary">
+<div class="size-6 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">analytics</span>
+</div>
+<h2 class="text-[#111813] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">QuoteAI Enterprise</h2>
+</div>
+<nav class="hidden md:flex items-center gap-9">
+<a class="text-[#111813] dark:text-white text-sm font-medium leading-normal opacity-60 hover:opacity-100" href="#">Kontrol Paneli</a>
+<a class="text-[#111813] dark:text-white text-sm font-medium leading-normal opacity-60 hover:opacity-100" href="#">Teklifler</a>
+<a class="text-[#111813] dark:text-white text-sm font-bold leading-normal border-b-2 border-primary pb-1" href="#">Temsilci Raporları</a>
+<a class="text-[#111813] dark:text-white text-sm font-medium leading-normal opacity-60 hover:opacity-100" href="#">Ayarlar</a>
+</nav>
+</div>
+<div class="flex flex-1 justify-end gap-4 md:gap-8">
+<label class="hidden lg:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#61896f] flex border-none bg-[#f0f4f2] dark:bg-white/5 items-center justify-center pl-4 rounded-l-lg">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111813] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#f0f4f2] dark:bg-white/5 h-full placeholder:text-[#61896f] px-4 rounded-l-none pl-2 text-sm font-normal" placeholder="Temsilci ara..." value=""/>
+</div>
+</label>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-[#111813] text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Dışa Aktar</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-[#f0f4f2] dark:border-white/10" data-alt="Yönetici profil resmi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDWohg86ZHnoXIGeJUowDijlgbTZ-1aLV8RwenCW_NP88GvmY4di0kQ8SJlrQNRhs4HvQEiCHZ6OvtE0jBmBstXlR-rMcjvNqZHd0jyPKTHbOpw92ReH3EkgiX82IpissiAXY9SJ811ajAlRevN86r8i5op3w6ldjigA-qoHA3fV1v0evcA2KVd2J9upUa2XA3vnz3w2C0SIrL_EtSVu2HivyAM8nv0jfPYbMXrocJTcl9oeWjfk2rqHg4jTQPL77_s3q96HPFdUMTg");'></div>
+</div>
+</div>
+</header>
+<main class="px-4 md:px-10 lg:px-40 py-8">
+<div class="flex flex-wrap justify-between items-end gap-4 mb-8">
+<div class="flex flex-col gap-2">
+<h1 class="text-[#111813] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Temsilci Performans Raporları</h1>
+<p class="text-[#61896f] text-base font-normal leading-normal">Satış ekibi dönüşüm ve yanıt metriklerine dair AI destekli analizler</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-[#dbe6df] dark:border-white/10 rounded-lg text-[#111813] dark:text-white text-sm font-bold">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+<span>PDF Oluştur</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-[#dbe6df] dark:border-white/10 rounded-lg text-[#111813] dark:text-white text-sm font-bold">
+<span class="material-symbols-outlined text-[18px]">share</span>
+</button>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 rounded-xl border border-[#f0f4f2] dark:border-white/10 p-2 mb-8 shadow-sm">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex flex-1 gap-3 flex-wrap p-2">
+<div class="relative group">
+<button class="flex min-w-[180px] items-center gap-3 cursor-pointer overflow-hidden rounded-lg h-10 px-4 bg-[#f0f4f2] dark:bg-white/10 text-[#111813] dark:text-white text-sm font-bold">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span class="truncate">Son 30 Gün</span>
+<span class="material-symbols-outlined text-[18px] ml-auto">expand_more</span>
+</button>
+</div>
+<div class="relative group">
+<button class="flex min-w-[220px] items-center gap-3 cursor-pointer overflow-hidden rounded-lg h-10 px-4 bg-[#f0f4f2] dark:bg-white/10 text-[#111813] dark:text-white text-sm font-bold">
+<span class="material-symbols-outlined text-[18px]">person</span>
+<span class="truncate">Tüm Temsilciler</span>
+<span class="material-symbols-outlined text-[18px] ml-auto">expand_more</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2 px-4 border-l border-[#f0f4f2] dark:border-white/10">
+<p class="text-xs text-[#61896f] uppercase font-bold tracking-widest">Otomatik Analiz Aktif</p>
+<div class="size-2 bg-primary rounded-full animate-pulse"></div>
+</div>
+</div>
+</div>
+<section class="mb-12">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary">workspace_premium</span>
+<h3 class="text-xl font-bold dark:text-white">Dönüşüm Oranına Göre En İyi 3 Temsilci</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white dark:bg-white/5 p-6 rounded-xl border border-[#f0f4f2] dark:border-white/10 flex flex-col items-center text-center relative overflow-hidden order-2 md:order-1">
+<div class="absolute top-0 right-0 p-3">
+<div class="bg-[#f0f4f2] dark:bg-white/10 rounded-full px-2 py-1 text-[10px] font-bold">SIRA 2</div>
+</div>
+<div class="size-20 bg-cover bg-center rounded-full mb-4 ring-4 ring-[#f0f4f2] dark:ring-white/5" data-alt="Kadın satış temsilcisi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAhIAnv6nr5d0fI99AadCbnYHgelbyDrJMAXXjUGd10vop5JhDMwKJUvFsNh5f3zZLAIK1jZWXiACriz9B2etTE9HIQ6raTDJqpASCPvs-QM7H9yJO_lFrF4bdsolGunDiCMg6Io6LE7xb_enJitb-yuMl0aMR4O639w2WfMPcv-njskNS0hlRjD3GoXV1d2-BceuZdcee2ZbxBy1lMTaKy0uPncMHnFgWWkMeFQdZd-NesGJvYm2l5DtF3fO-woTxX7wiugRa3DQBF");'></div>
+<h4 class="font-bold text-lg dark:text-white">Sarah Jenkins</h4>
+<p class="text-primary font-black text-2xl">84.2%</p>
+<p class="text-[#61896f] text-xs uppercase font-bold mt-1">Dönüşüm Oranı</p>
+<div class="w-full h-1 bg-[#f0f4f2] dark:bg-white/10 mt-6 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 84%"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 p-8 rounded-xl border-2 border-primary/30 dark:border-primary/50 flex flex-col items-center text-center relative overflow-hidden order-1 md:order-2 shadow-xl shadow-primary/5">
+<div class="absolute top-0 right-0 p-4">
+<span class="material-symbols-outlined text-primary text-3xl">military_tech</span>
+</div>
+<div class="size-24 bg-cover bg-center rounded-full mb-4 ring-4 ring-primary" data-alt="En iyi performans gösteren erkek satış temsilcisi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDHt2U193SoQPL5bYouhVxqZUDfNtn57QP09fiJrDvY8GgcJsOV06S1FLeV8PSD29-7klUguyBksUibNowi1n9hbJl4tyckLI4KxmPOfMuEfkt2F763mOolVShVmUxYPzm9RkkePaHiV82uMNkMG9bn3I4FZE51dcRaPUKbJZLdx0L_KcBBhV5pIBgu68v4GqcOJXdLdFEwCjPSG6drspZdXAltC7bmCrp7iBO6mIqqt-piHuQijefC5vrgkuVrKFlpIlr9SZjfl18E");'></div>
+<h4 class="font-bold text-xl dark:text-white">Marcus Thorne</h4>
+<p class="text-primary font-black text-3xl">91.7%</p>
+<p class="text-[#61896f] text-xs uppercase font-bold mt-1">Dönüşüm Oranı</p>
+<div class="w-full h-2 bg-[#f0f4f2] dark:bg-white/10 mt-6 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 91%"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 p-6 rounded-xl border border-[#f0f4f2] dark:border-white/10 flex flex-col items-center text-center relative overflow-hidden order-3">
+<div class="absolute top-0 right-0 p-3">
+<div class="bg-[#f0f4f2] dark:bg-white/10 rounded-full px-2 py-1 text-[10px] font-bold">SIRA 3</div>
+</div>
+<div class="size-20 bg-cover bg-center rounded-full mb-4 ring-4 ring-[#f0f4f2] dark:ring-white/5" data-alt="Asyalı kadın satış temsilcisi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDByAx6C35WkGvyMGHlE3zx_gXGzv3aRnTjnOYzAlHkLeqj1gZSqeJLi5jI0BOPMA09Krc5A5S3mbU-Ccm_3gsdzUz5Z-bctJNav8VdPMYfDMzncDhFT-zqBMopx7fQJSt5HQt72ogZA2Yao8anbl7NOzp7zRcUCFnNcmifNvYjGxd62QdUbE-ZtAALxa2bkbtEFOebFceF-PLi2kmlJGiBPbXMNpqkkiCWRqabDsMsemd0mm4kwrylQ8AmkU6ItEYYsO1dMdhR7Kfu");'></div>
+<h4 class="font-bold text-lg dark:text-white">Elena Rodriguez</h4>
+<p class="text-primary font-black text-2xl">79.5%</p>
+<p class="text-[#61896f] text-xs uppercase font-bold mt-1">Dönüşüm Oranı</p>
+<div class="w-full h-1 bg-[#f0f4f2] dark:bg-white/10 mt-6 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 79%"></div>
+</div>
+</div>
+</div>
+</section>
+<div class="pb-6">
+<div class="flex border-b border-[#dbe6df] dark:border-white/10 px-4 gap-8 overflow-x-auto">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-[#111813] dark:text-white pb-[13px] pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Tüm Temsilciler</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#61896f] pb-[13px] pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">En İyi Performans</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#61896f] pb-[13px] pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Düşük Yanıt Oranı</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#61896f] pb-[13px] pt-4 whitespace-nowrap" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Özel Grup</p>
+</a>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+<div class="bg-white dark:bg-white/5 rounded-xl border border-[#f0f4f2] dark:border-white/10 p-6 flex flex-col gap-6">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 items-center">
+<div class="size-12 bg-cover bg-center rounded-lg" data-alt="Satış temsilcisi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBRsy47WGk76I8AaOUkpH6yWKvihiEZGzPRbhjJiyRmrUwmXJJlveVeHRHNWgaaBm00Yxv-96jV4GtKPxNtsjdnslfIrekZsv49Ws31AUeady5w0AEwBEK3St3WR7m1_6JAUjTNfw1MZktHEszIO_EWTgyiz9Z0HvqQHYF1IeLl-7UViVLID-qtvBwp4irpmXzRZ4QjSWlVX1FapmubHkd_XV8ca2BJhnWWD-MPTwkeCYXCQ0B6xmLV1XxJb6WGUQhChXfy2pJ-0P98");'></div>
+<div>
+<h5 class="font-bold text-lg dark:text-white">David Chen</h5>
+<p class="text-xs text-[#61896f] font-medium">Kıdemli Portföy Yöneticisi</p>
+</div>
+</div>
+<div class="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded text-primary text-[10px] font-black uppercase">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI İzleme
+                </div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-[#f0f4f2] dark:bg-white/5 p-4 rounded-lg">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-1">Toplam Teklif</p>
+<p class="text-2xl font-black dark:text-white">142</p>
+</div>
+<div class="bg-[#f0f4f2] dark:bg-white/5 p-4 rounded-lg">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-1">Onaylanan Tutar</p>
+<p class="text-2xl font-black dark:text-white">$842,500</p>
+</div>
+</div>
+<div class="flex gap-6 items-center border-t border-[#f0f4f2] dark:border-white/10 pt-6">
+<div class="flex-1">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-4">Durum Dağılımı</p>
+<div class="flex items-center gap-4">
+<div class="pie-chart"></div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold dark:text-white">65% Onaylanan</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-[#f0f4f2] dark:bg-white/20"></div>
+<span class="text-[10px] font-bold dark:text-white">20% Bekleyen</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-[#111813] dark:bg-white"></div>
+<span class="text-[10px] font-bold dark:text-white">15% Reddedildi</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col items-center border-l border-[#f0f4f2] dark:border-white/10 pl-6">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-4 w-full">Hatırlatma Yanıt Oranı</p>
+<div class="gauge-container mb-1">
+<div class="gauge-bg"></div>
+<div class="gauge-fill" style="transform: rotate(40deg);"></div>
+</div>
+<p class="text-xl font-black dark:text-white">92%</p>
+<p class="text-[10px] text-[#61896f] font-bold">AI Yanıt Takibi</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 rounded-xl border border-[#f0f4f2] dark:border-white/10 p-6 flex flex-col gap-6">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 items-center">
+<div class="size-12 bg-cover bg-center rounded-lg" data-alt="Satış temsilcisi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD6Bn3QE24WoE1_2chHkOzF4UooQ1dFptuJn5QrzKCpWKLawDf5R3d61n0Szp45c_4UKIijWMrnTIfkEQ-gIMHIb_vntozfElSd2IeICJDTPdzD4kevSYuH_Ed6qupWsNBEoqlaSywIA6ZnMhZhg4_JnoqQr0bQJBoN3VQH2u1Nf1_YdbRO-G-NMEWkreqygJq8juaubxSbeWjlUsXjtUC7e0TZ-RMu_Jhk9Sde4p7VkRWk9_sNm5S9WaQhwxt_MG0B3WAl2TK_1Xue");'></div>
+<div>
+<h5 class="font-bold text-lg dark:text-white">Sophia Miller</h5>
+<p class="text-xs text-[#61896f] font-medium">İç Satış Temsilcisi</p>
+</div>
+</div>
+<div class="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded text-primary text-[10px] font-black uppercase">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI İzleme
+                </div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-[#f0f4f2] dark:bg-white/5 p-4 rounded-lg">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-1">Toplam Teklif</p>
+<p class="text-2xl font-black dark:text-white">98</p>
+</div>
+<div class="bg-[#f0f4f2] dark:bg-white/5 p-4 rounded-lg">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-1">Onaylanan Tutar</p>
+<p class="text-2xl font-black dark:text-white">$412,200</p>
+</div>
+</div>
+<div class="flex gap-6 items-center border-t border-[#f0f4f2] dark:border-white/10 pt-6">
+<div class="flex-1">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-4">Durum Dağılımı</p>
+<div class="flex items-center gap-4">
+<div class="pie-chart" style="background: conic-gradient(#13ec5b 0% 50%, #f0f4f2 50% 90%, #111813 90% 100%);"></div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold dark:text-white">50% Onaylanan</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-[#f0f4f2] dark:bg-white/20"></div>
+<span class="text-[10px] font-bold dark:text-white">40% Bekleyen</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-[#111813] dark:bg-white"></div>
+<span class="text-[10px] font-bold dark:text-white">10% Reddedildi</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col items-center border-l border-[#f0f4f2] dark:border-white/10 pl-6">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-4 w-full">Hatırlatma Yanıt Oranı</p>
+<div class="gauge-container mb-1">
+<div class="gauge-bg"></div>
+<div class="gauge-fill" style="transform: rotate(-10deg); border-color: #f59e0b;"></div>
+</div>
+<p class="text-xl font-black dark:text-white">68%</p>
+<p class="text-[10px] text-[#61896f] font-bold">Geliştirilmeli</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 rounded-xl border border-[#f0f4f2] dark:border-white/10 p-6 flex flex-col gap-6">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 items-center">
+<div class="size-12 bg-cover bg-center rounded-lg" data-alt="Satış temsilcisi" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuChABHTmmB_Jx3TnsWMEe_SKUCkq7N7B0eQn2a9g9n-Ud51QtEnD2LRclVW7ZoLULybLrcbkmzE-KyYPXrutzM73xBsH1EnFW35U7sAJVDwfVDN_pCLj4G1ZbsX2Vd8MYFKbJs4hlwiISl1Lqszr5H0VH0GMjKuGFozV3XSOOwP-gGau6RtpbdLIs_WBsnRRCKy9bMkftq2SXJAOnwl9MfKxd8juVr-Hu3yjovT1A3D6zoPKEwbZoocl48XugwjMdb5OZSZdWbj7LEv");'></div>
+<div>
+<h5 class="font-bold text-lg dark:text-white">James Wilson</h5>
+<p class="text-xs text-[#61896f] font-medium">Küçük Müşteri Temsilcisi</p>
+</div>
+</div>
+<div class="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded text-primary text-[10px] font-black uppercase">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI İzleme
+                </div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-[#f0f4f2] dark:bg-white/5 p-4 rounded-lg">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-1">Toplam Teklif</p>
+<p class="text-2xl font-black dark:text-white">56</p>
+</div>
+<div class="bg-[#f0f4f2] dark:bg-white/5 p-4 rounded-lg">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-1">Onaylanan Tutar</p>
+<p class="text-2xl font-black dark:text-white">$195,000</p>
+</div>
+</div>
+<div class="flex gap-6 items-center border-t border-[#f0f4f2] dark:border-white/10 pt-6">
+<div class="flex-1">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-4">Durum Dağılımı</p>
+<div class="flex items-center gap-4">
+<div class="pie-chart" style="background: conic-gradient(#13ec5b 0% 75%, #f0f4f2 75% 95%, #111813 95% 100%);"></div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold dark:text-white">75% Onaylanan</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-[#f0f4f2] dark:bg-white/20"></div>
+<span class="text-[10px] font-bold dark:text-white">20% Bekleyen</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-[#111813] dark:bg-white"></div>
+<span class="text-[10px] font-bold dark:text-white">5% Reddedildi</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col items-center border-l border-[#f0f4f2] dark:border-white/10 pl-6">
+<p class="text-xs text-[#61896f] font-bold uppercase mb-4 w-full">Hatırlatma Yanıt Oranı</p>
+<div class="gauge-container mb-1">
+<div class="gauge-bg"></div>
+<div class="gauge-fill" style="transform: rotate(25deg);"></div>
+</div>
+<p class="text-xl font-black dark:text-white">82%</p>
+<p class="text-[10px] text-[#61896f] font-bold">Hedef Üstü</p>
+</div>
+</div>
+</div>
+<div class="bg-white/50 dark:bg-white/5 rounded-xl border border-dashed border-[#dbe6df] dark:border-white/10 p-6 flex items-center justify-center min-h-[300px]">
+<div class="text-center">
+<span class="material-symbols-outlined text-4xl text-[#61896f] opacity-40 mb-2">person_add</span>
+<p class="text-sm font-bold text-[#61896f]">AI tarafından analiz edilen performans metriklerini görmek için daha fazla temsilci ekleyin.</p>
+</div>
+</div>
+</div>
+</main>
+<footer class="mt-20 border-t border-[#f0f4f2] dark:border-white/10 py-10 px-4 md:px-10 lg:px-40">
+<div class="flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-4 text-[#111813] dark:text-primary opacity-50">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-bold">QuoteAI Enterprise v2.4</span>
+</div>
+<p class="text-xs text-[#61896f] font-medium">© 2023 QuoteAI Sistemleri. Tüm temsilci performans verileri şifrelenir ve güvenli bir şekilde analiz edilir.</p>
+</div>
+</footer>
+
+</body></html>
