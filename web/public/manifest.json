@@ -1,0 +1,30 @@
+{
+    "name": "Teklif Yönetim Sistemi",
+    "short_name": "TeklifAI",
+    "description": "AI destekli kurumsal teklif yönetim platformu",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#102216",
+    "theme_color": "#13ec5b",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon-192.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "lang": "tr",
+    "dir": "ltr"
+}
