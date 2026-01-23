@@ -138,9 +138,20 @@ export default function ChatPage() {
         return `${symbols[currency] || ""}${amount?.toLocaleString('tr-TR') || 0}`;
     };
 
+    useEffect(() => {
+        console.log("Nuclear Option: Unregistering Service Workers...");
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+    }, []);
+
     return (
         <>
-            <Header title="Yapay Zeka Chatbot v1.2" />
+            <Header title="CHATBOT V2 (FIXED)" />
             <main className="flex-1 flex flex-col h-[calc(100vh-80px)] overflow-hidden">
 
                 {/* Messages Area */}
