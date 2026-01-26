@@ -20,12 +20,7 @@ interface ParsedData {
 }
 
 export default function UploadPage() {
-    const [file, setFile] = useState<File | null>(null);
-    const [isScanning, setIsScanning] = useState(false);
-    const [extractedDisplay, setExtractedDisplay] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [formData, setFormData] = useState<ParsedData | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const { session } = useAuth(); // Get session for token
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -70,12 +65,17 @@ export default function UploadPage() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 120000);
 
+            if (!session?.access_token) {
+                throw new Error("Oturum süresi dolmuş. Lütfen sayfayı yenileyin.");
+            }
+
             const response = await fetch(
                 'https://xjmgwfcveqvumykjvrtj.supabase.co/functions/v1/parse-proposal',
                 {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
                     },
                     body: JSON.stringify({
                         file_base64: base64File,
