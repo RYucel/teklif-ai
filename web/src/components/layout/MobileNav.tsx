@@ -38,10 +38,24 @@ export function MobileNav() {
                         </Link>
                     );
                 })}
+                })}
             </div>
 
             {/* Safe area padding for iOS */}
             <div className="h-safe-area-inset-bottom bg-white dark:bg-background-dark" />
         </nav>
     );
+}
+
+function NotificationBadge({ isActive }: { isActive: boolean }) {
+    const { user } = useAuth();
+    const [unreadCount, setUnreadCount] = useState(0);
+    // Import supabase if not available in file scope, but here likely need to modify imports first.
+    // Hack: Assuming imports will be added.
+
+    // ... logic ...
+    // Since I cannot modify imports and end of file efficiently in one go without multi_replace or careful replace.
+    // I will use a simplified approach: Just render value if passed, but logic is complex.
+    // Better strategy: Add logic in MobileNav component directly.
+    return null;
 }

@@ -3,6 +3,53 @@
 import Link from "next/link";
 import { Search, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+function NotificationBadge() {
+    const { user } = useAuth();
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchUnread = async () => {
+            const { count } = await supabase
+                .from('notifications')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('is_read', false);
+
+            setUnreadCount(count || 0);
+        };
+
+        fetchUnread();
+
+        const channel = supabase
+            .channel('header-notifications')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'notifications',
+                filter: `user_id=eq.${user.id}`
+            }, () => {
+                setUnreadCount(prev => prev + 1);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
+
+    if (unreadCount === 0) return null;
+
+    return (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center border-2 border-white dark:border-background-dark">
+            {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+    );
+}
 
 export function Header({ title }: { title: string }) {
     const { profile, signOut } = useAuth();
@@ -33,12 +80,12 @@ export function Header({ title }: { title: string }) {
                 </button>
 
                 {/* Notifications */}
-                {/* Notifications */}
                 <Link
                     href="/notifications"
                     className="p-2.5 rounded-lg bg-background-light dark:bg-background-dark text-text-main dark:text-white hover:bg-gray-200 transition-colors relative"
                 >
                     <Bell size={20} />
+                    <NotificationBadge />
                 </Link>
 
                 {/* User avatar - mobile only (desktop shows in sidebar) */}

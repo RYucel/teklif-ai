@@ -7,7 +7,7 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { Loader2 } from 'lucide-react';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-    const { loading, user } = useAuth();
+    const { loading, user, debugStatus } = useAuth();
     const pathname = usePathname();
 
     // Public paths that don't need the shell
@@ -19,7 +19,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-sm text-text-secondary">Oturum kontrol ediliyor...</p>
+                <p className="text-sm text-text-secondary">{debugStatus || "Oturum kontrol ediliyor..."}</p>
+                <div className="text-xs text-gray-500 mt-2">v1.3 Debug Mode</div>
             </div>
         );
     }
@@ -34,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-sm text-text-secondary">Giriş sayfasına yönlendiriliyorsunuz...</p>
+                <p className="text-sm text-text-secondary">{debugStatus || "Yönlendiriliyorsunuz..."}</p>
             </div>
         );
     }

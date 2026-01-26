@@ -21,6 +21,7 @@ interface AuthContextType {
     signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
     signOut: () => Promise<void>;
     isAdmin: boolean;
+    debugStatus: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,10 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [debugStatus, setDebugStatus] = useState<string>("Initializing Auth...");
     const router = useRouter();
     const pathname = usePathname();
 
     const fetchProfile = async (userId: string) => {
+        setDebugStatus(`Fetching Profile: ${userId.substring(0, 5)}...`);
         try {
             const { data, error } = await supabase
                 .from('profiles')
@@ -43,34 +46,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (error) {
                 console.error('Profile fetch error:', error);
+                setDebugStatus(`Profile Error: ${error.message}`);
                 return null;
             }
             return data as UserProfile;
         } catch (err) {
             console.error('Profile fetch exception:', err);
+            setDebugStatus("Profile Exception");
             return null;
         }
     };
 
     useEffect(() => {
-        // Safety timeout - force stop loading after 10 seconds
+        // Safety timeout - force stop loading after 5 seconds
         const timeoutId = setTimeout(() => {
-            console.warn('Auth timeout reached (10s), forcing loading false');
+            console.warn('Auth timeout reached (5s), forcing loading false');
+            setDebugStatus("Timeout Reached (5s) - Force Load");
             setLoading(false);
-        }, 10000);
+        }, 5000);
 
+        setDebugStatus("Checking Session...");
         // Get initial session
         supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
             clearTimeout(timeoutId);
 
             if (error) {
                 console.error('GetSession error:', error);
+                setDebugStatus(`Session Error: ${error.message}`);
                 setLoading(false);
                 return;
             }
 
             if (currentSession?.user) {
                 console.log('Session found:', currentSession.user.email);
+                setDebugStatus(`Session Found: ${currentSession.user.email}`);
                 setSession(currentSession);
                 setUser(currentSession.user);
 
@@ -78,11 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setProfile(userProfile);
             } else {
                 console.log('No active session');
+                setDebugStatus("No Active Session");
             }
 
             setLoading(false);
         }).catch(err => {
             console.error('Auth initialization error:', err);
+            setDebugStatus(`Auth Init Error: ${err.message}`);
             clearTimeout(timeoutId);
             setLoading(false);
         });
@@ -91,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, newSession) => {
                 console.log('Auth state change:', event, newSession?.user?.email);
+                setDebugStatus(`Auth Event: ${event}`);
 
                 setSession(newSession);
                 setUser(newSession?.user ?? null);
@@ -120,13 +132,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const isPublicPath = publicPaths.includes(pathname);
 
         if (!user && !isPublicPath) {
+            setDebugStatus("Redirecting to Login...");
             router.push('/login');
         } else if (user && isPublicPath) {
+            setDebugStatus("Redirecting to Home...");
             router.push('/');
         }
     }, [user, loading, pathname, router]);
 
     const signIn = async (email: string, password: string) => {
+        setDebugStatus("Signing In...");
         const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -135,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const signOut = async () => {
+        setDebugStatus("Signing Out...");
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
@@ -150,11 +166,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         isAdmin: profile?.role === 'admin',
+        debugStatus,
     };
 
     return (
         <AuthContext.Provider value={value}>
             {children}
+            {/* Debug overlay for development */}
+            {/* <div className="fixed bottom-0 right-0 bg-black/80 text-white p-2 text-xs z-50">
+                Status: {debugStatus} | Loading: {loading ? 'T' : 'F'} | User: {user ? 'Y' : 'N'}
+            </div> */}
         </AuthContext.Provider>
     );
 }
