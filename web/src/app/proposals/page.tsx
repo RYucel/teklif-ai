@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { FollowUpModal } from "@/components/proposals/FollowUpModal";
 import { FollowUpBadge } from "@/components/proposals/FollowUpBadge";
-import { FileText, Search, Filter, Eye, Edit, Trash2, Clock, CheckCircle, XCircle, Send, AlertCircle } from "lucide-react";
+import { FileText, Search, Filter, Eye, Edit, Trash2, Clock, CheckCircle, XCircle, Send, AlertCircle, Bell } from "lucide-react";
 
 interface Proposal {
     id: string;
@@ -45,7 +45,7 @@ const deptLabels: Record<string, string> = {
 };
 
 export default function ProposalsPage() {
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -117,8 +117,52 @@ export default function ProposalsPage() {
             alert("Durum güncellenemedi: " + error.message);
         } else {
             setProposals(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+
+            // NOTIFICATION LOGIC: Notify Admins about status change
+            // 1. Get Admins
+            const { data: admins } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('role', 'admin');
+
+            if (admins && admins.length > 0) {
+                const proposal = proposals.find(p => p.id === id);
+                const statusLabel = statusConfig[newStatus]?.label || newStatus;
+
+                const notifications = admins.map(admin => ({
+                    user_id: admin.id,
+                    proposal_id: id,
+                    type: 'status_change',
+                    title: 'Durum Güncellendi',
+                    message: `${proposal?.proposal_no} nolu teklifin durumu "${statusLabel}" olarak güncellendi.`,
+                    is_read: false
+                }));
+
+                await supabase.from('notifications').insert(notifications);
+            }
         }
         setShowStatusMenu(null);
+    };
+
+    const handleManualReminder = async (proposal: Proposal) => {
+        if (!confirm(`"${proposal.proposal_no}" için temsilciye (${proposal.representative_name}) hatırlatma gönderilsin mi?`)) return;
+
+        const { error } = await supabase
+            .from('notifications')
+            .insert({
+                user_id: proposal.representative_id,
+                proposal_id: proposal.id,
+                type: 'reminder',
+                title: 'Yönetici Hatırlatması',
+                message: `${proposal.proposal_no} nolu teklif için yönetici hatırlatması. Lütfen durumu kontrol ediniz.`,
+                is_read: false
+            });
+
+        if (error) {
+            alert("Hatırlatma gönderilemedi: " + error.message);
+        } else {
+            alert("Hatırlatma gönderildi.");
+        }
     };
 
     // Calculate follow-up stats
@@ -256,6 +300,18 @@ export default function ProposalsPage() {
                                                 </td>
                                                 <td className="px-4 md:px-6 py-4">
                                                     <div className="flex justify-end gap-1 md:gap-2">
+                                                        {isAdmin && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleManualReminder(proposal);
+                                                                }}
+                                                                title="Temsilciye Hatırlat"
+                                                                className="p-2 hover:bg-amber-100 dark:hover:bg-amber-900/20 rounded-lg text-amber-600 transition-colors"
+                                                            >
+                                                                <Bell size={18} className="fill-current" />
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => setSelectedProposal(proposal)}
                                                             className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-text-secondary transition-colors"
