@@ -124,7 +124,7 @@ export default function Home() {
 
   return (
     <>
-      <Header title="Yönetici Paneli" />
+      <Header title="Yönetici Paneli v1.4" />
       <main className="flex-1 p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto">
 
         {/* Stats Grid */}
