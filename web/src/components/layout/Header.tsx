@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Search, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -32,13 +33,13 @@ export function Header({ title }: { title: string }) {
                 </button>
 
                 {/* Notifications */}
-                <button className="p-2.5 rounded-lg bg-background-light dark:bg-background-dark text-text-main dark:text-white hover:bg-gray-200 transition-colors relative">
+                {/* Notifications */}
+                <Link
+                    href="/notifications"
+                    className="p-2.5 rounded-lg bg-background-light dark:bg-background-dark text-text-main dark:text-white hover:bg-gray-200 transition-colors relative"
+                >
                     <Bell size={20} />
-                    {/* Notification badge */}
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-background-dark text-[10px] font-bold rounded-full flex items-center justify-center">
-                        3
-                    </span>
-                </button>
+                </Link>
 
                 {/* User avatar - mobile only (desktop shows in sidebar) */}
                 <div className="relative md:hidden group">
