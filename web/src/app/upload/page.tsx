@@ -405,7 +405,8 @@ function ExtractionForm({ data, rawAiData, file }: { data: ParsedData; rawAiData
             setSavedProposalNo("(Kaydedildi)"); // Placeholder since we can't retrieve it without SELECT permission
         } catch (err: any) {
             console.error("Save Catch Error:", err);
-            setSaveError(err.message || "Teklif kaydedilirken bir hata oluştu.");
+            // Show detailed error if available
+            setSaveError(err.message || err.details || err.hint || "Teklif kaydedilirken bir hata oluştu.");
         } finally {
             console.log("handleSave finally block");
             setIsSaving(false);
