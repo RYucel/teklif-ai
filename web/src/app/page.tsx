@@ -39,11 +39,24 @@ export default function Home() {
   const fetchDashboardData = async () => {
     setLoading(true);
 
+    console.log("Dashboard: Fetching data...");
+
+    // Safety timeout to prevent infinite spinner
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.error("Dashboard: Fetch timeout reached.");
+        setLoading(false);
+      }
+    }, 10000);
+
     // Fetch all proposals
-    const { data: proposals, error } = await supabase
+    const { data: proposals, error, status, statusText } = await supabase
       .from('proposals')
       .select('*')
       .order('created_at', { ascending: false });
+
+    clearTimeout(timer);
+    console.log("Dashboard: Fetch result:", { proposals, error, status, statusText });
 
     if (error) {
       console.error('Dashboard fetch error:', error);
