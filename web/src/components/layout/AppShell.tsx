@@ -17,8 +17,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // Show loading spinner while checking auth
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-text-secondary">Oturum kontrol ediliyor...</p>
             </div>
         );
     }
@@ -31,8 +32,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // Not logged in - children will be replaced by redirect
     if (!user) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-text-secondary">Giriş sayfasına yönlendiriliyorsunuz...</p>
             </div>
         );
     }
