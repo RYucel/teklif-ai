@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 const navItems = [
     { href: '/', icon: LayoutDashboard, label: 'Panel' },
-    { href: '/upload', icon: Upload, label: 'Yükle' },
+    // { href: '/upload', icon: Upload, label: 'Yükle' }, // Removed for mobile
     { href: '/proposals', icon: FileText, label: 'Teklifler' },
     { href: '/chat', icon: MessageSquare, label: 'Asistan' },
     { href: '/notifications', icon: Bell, label: 'Bildirimler' },

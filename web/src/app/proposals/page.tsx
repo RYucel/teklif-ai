@@ -234,7 +234,7 @@ export default function ProposalsPage() {
                                                 <td className="px-4 md:px-6 py-4 relative">
                                                     <button
                                                         onClick={() => setShowStatusMenu(showStatusMenu === proposal.id ? null : proposal.id)}
-                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${status.color} hover:opacity-80 cursor-pointer`}
+                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${status.color} hover:opacity-80 pointer-events-none md:pointer-events-auto md:cursor-pointer`}
                                                     >
                                                         {status.icon}
                                                         {status.label}
@@ -368,7 +368,7 @@ export default function ProposalsPage() {
                                 </div>
                             )}
 
-                            <div>
+                            <div className="hidden md:block">
                                 <p className="text-xs font-bold text-text-secondary uppercase mb-2">Durumu Değiştir</p>
                                 <div className="flex flex-wrap gap-2">
                                     {Object.entries(statusConfig).map(([key, conf]) => (
