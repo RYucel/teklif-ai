@@ -21,6 +21,12 @@ interface ParsedData {
 
 export default function UploadPage() {
     const { session } = useAuth(); // Get session for token
+    const [file, setFile] = useState<File | null>(null);
+    const [isScanning, setIsScanning] = useState(false);
+    const [extractedDisplay, setExtractedDisplay] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [formData, setFormData] = useState<ParsedData | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
