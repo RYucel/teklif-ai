@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Upload, FileText, MessageSquare, Bell } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 const navItems = [
     { href: '/', icon: LayoutDashboard, label: 'Panel' },
@@ -15,7 +17,40 @@ const navItems = [
 
 export function MobileNav() {
     const pathname = usePathname();
-    const { profile } = useAuth();
+    const { user } = useAuth();
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchUnread = async () => {
+            const { count } = await supabase
+                .from('notifications')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('is_read', false);
+
+            setUnreadCount(count || 0);
+        };
+
+        fetchUnread();
+
+        const channel = supabase
+            .channel('mobile-nav-notifications')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'notifications',
+                filter: `user_id=eq.${user.id}`
+            }, () => {
+                setUnreadCount(prev => prev + 1);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-background-dark border-t border-gray-200 dark:border-gray-700 z-50">
@@ -23,21 +58,28 @@ export function MobileNav() {
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
+                    const isNotification = item.href === '/notifications';
 
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${isActive
+                            className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors relative ${isActive
                                 ? 'text-primary'
                                 : 'text-text-secondary hover:text-text-main'
                                 }`}
                         >
-                            <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} />
+                            <div className="relative">
+                                <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} />
+                                {isNotification && unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center border-2 border-white dark:border-background-dark">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-[10px] mt-1 font-medium">{item.label}</span>
                         </Link>
                     );
-                })}
                 })}
             </div>
 
@@ -45,17 +87,4 @@ export function MobileNav() {
             <div className="h-safe-area-inset-bottom bg-white dark:bg-background-dark" />
         </nav>
     );
-}
-
-function NotificationBadge({ isActive }: { isActive: boolean }) {
-    const { user } = useAuth();
-    const [unreadCount, setUnreadCount] = useState(0);
-    // Import supabase if not available in file scope, but here likely need to modify imports first.
-    // Hack: Assuming imports will be added.
-
-    // ... logic ...
-    // Since I cannot modify imports and end of file efficiently in one go without multi_replace or careful replace.
-    // I will use a simplified approach: Just render value if passed, but logic is complex.
-    // Better strategy: Add logic in MobileNav component directly.
-    return null;
 }
