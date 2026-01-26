@@ -10,6 +10,7 @@ const navItems = [
     { href: '/upload', icon: Upload, label: 'Yükle' },
     { href: '/proposals', icon: FileText, label: 'Teklifler' },
     { href: '/chat', icon: MessageSquare, label: 'Asistan' },
+    { href: '/notifications', icon: Bell, label: 'Bildirimler' },
 ];
 
 export function MobileNav() {
@@ -28,8 +29,8 @@ export function MobileNav() {
                             key={item.href}
                             href={item.href}
                             className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${isActive
-                                    ? 'text-primary'
-                                    : 'text-text-secondary hover:text-text-main'
+                                ? 'text-primary'
+                                : 'text-text-secondary hover:text-text-main'
                                 }`}
                         >
                             <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} />
