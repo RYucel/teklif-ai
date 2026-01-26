@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (error) {
                 console.error('Profile fetch error:', error);
                 setDebugStatus(`Profile Error: ${error.message}`);
+                // If profile fetch fails (e.g. RLS or missing data), consider user invalid
                 return null;
             }
             return data as UserProfile;
@@ -56,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return null;
         }
     };
+
+    // Force sign out if we have a user but no profile after a grace period?
+    // Better: Handle in the effect.
 
     useEffect(() => {
         // Safety timeout - force stop loading after 5 seconds
@@ -84,6 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(currentSession.user);
 
                 const userProfile = await fetchProfile(currentSession.user.id);
+                if (!userProfile) {
+                    console.error("User authenticated but no profile found. Forcing logout.");
+                    await signOut(); // Auto logout if no profile
+                    return;
+                }
                 setProfile(userProfile);
             } else {
                 console.log('No active session');
@@ -104,14 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.log('Auth state change:', event, newSession?.user?.email);
                 setDebugStatus(`Auth Event: ${event}`);
 
-                setSession(newSession);
-                setUser(newSession?.user ?? null);
-
-                if (newSession?.user) {
-                    const userProfile = await fetchProfile(newSession.user.id);
-                    setProfile(userProfile);
-                } else {
+                if (event === 'SIGNED_OUT') {
+                    setSession(null);
+                    setUser(null);
                     setProfile(null);
+                } else if (newSession) {
+                    setSession(newSession);
+                    setUser(newSession.user);
+                    if (newSession.user) {
+                        const userProfile = await fetchProfile(newSession.user.id);
+                        if (!userProfile && event !== 'INITIAL_SESSION') {
+                            // Only force logout here if it's not the initial load (handled above)
+                            // Actually, let's just warn or let the UI handle empty profile
+                            console.warn("Profile missing for logged in user");
+                        }
+                        setProfile(userProfile);
+                    }
                 }
 
                 setLoading(false);
@@ -151,7 +168,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signOut = async () => {
         setDebugStatus("Signing Out...");
-        await supabase.auth.signOut();
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error("Error signing out:", error);
+        }
+
+        // Force clear local storage to remove any stuck tokens
+        localStorage.clear();
+
         setUser(null);
         setProfile(null);
         setSession(null);
