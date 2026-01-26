@@ -46,11 +46,12 @@ serve(async (req) => {
       - If you see a table, the final total is usually at the end.
 
       **Fields to extract:**
-      - customer_name (string): Name of the client/customer found in the header.
-      - offer_date (YYYY-MM-DD): Date of the proposal.
+      - customer_name (string): Name of the client/customer found in the header (Kime / To).
+      - representative_name (string): STRICTLY extract from the field labeled "Müşteri Temsilcisi". Do NOT use the name in "Hazırlayan".
+      - offer_date (YYYY-MM-DD): Date of the proposal (Tarih).
       - total_amount (number): The final total monetary value found at the bottom. Ignore subtotals.
       - currency (TRY, USD, EUR): Currency of the total amount.
-      - work_description (string): A summary of the work description found in the header/body.
+      - work_description (string): A summary of the work description found in the header (Proje Konusu).
       - department_prediction (string): Predict category either '01-Havuz' or '02-Solar' based on keywords (e.g., 'pool', 'havuz', 'solar', 'panel').
       
       If a field is missing, use null.
@@ -81,7 +82,22 @@ serve(async (req) => {
             throw new Error(data.error.message);
         }
 
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const candidate = data.candidates?.[0];
+        const textResponse = candidate?.content?.parts?.[0]?.text;
+
+        if (!textResponse) {
+            console.error("Gemini Validation Failed. Full Response:", JSON.stringify(data));
+            // Check for safety ratings blocking the content
+            const safetyRatings = candidate?.safetyRatings;
+            if (safetyRatings) {
+                const dropped = safetyRatings.find((r: any) => r.probability !== "NEGLIGIBLE");
+                if (dropped) {
+                    throw new Error(`AI Güvenlik Filtresi: İçerik engellendi (${dropped.category}).`);
+                }
+            }
+            throw new Error("Yapay zeka geçerli bir yanıt döndüremedi. (Boş yanıt)");
+        }
+
         const jsonStart = textResponse.indexOf('{');
         const jsonEnd = textResponse.lastIndexOf('}') + 1;
         const jsonString = textResponse.substring(jsonStart, jsonEnd);
