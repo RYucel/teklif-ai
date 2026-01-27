@@ -59,7 +59,8 @@ export async function registerForPushNotificationsAsync() {
             console.error('Error getting push token:', e);
         }
     } else {
-        alert('Must use physical device for Push Notifications');
+        console.log('Must use physical device for Push Notifications');
+        // alert('Must use physical device for Push Notifications');
     }
 
     return token;
