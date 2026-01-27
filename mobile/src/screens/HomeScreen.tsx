@@ -58,6 +58,10 @@ export default function HomeScreen() {
 
     useEffect(() => {
         fetchData();
+        // Register for push notifications
+        import('../lib/notifications').then(mod => {
+            mod.registerForPushNotificationsAsync();
+        });
     }, [fetchData]);
 
     const onRefresh = useCallback(() => {
