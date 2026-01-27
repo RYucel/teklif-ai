@@ -64,10 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Safety timeout - force stop loading after 5 seconds
         const timeoutId = setTimeout(() => {
-            console.warn('Auth timeout reached (5s), forcing loading false');
-            setDebugStatus("Timeout Reached (5s) - Force Load");
+            console.warn('Auth timeout reached (3s), forcing loading false');
+            setDebugStatus("Timeout Reached (3s) - Force Load");
             setLoading(false);
-        }, 5000);
+        }, 3000);
 
         setDebugStatus("Checking Session...");
         // Get initial session
