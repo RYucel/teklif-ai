@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { supabase } from "@/lib/supabaseClient";
@@ -226,59 +227,61 @@ export default function RepresentativesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredReps.map((rep) => (
                             <div key={rep.id} className="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 flex flex-col items-center text-center hover:shadow-lg transition-shadow group relative">
-                                <div className="absolute top-4 right-4 flex gap-1">
+                                <div className="absolute top-4 right-4 flex gap-1 z-10">
                                     <button
-                                        onClick={() => openEditModal(rep)}
+                                        onClick={(e) => { e.stopPropagation(); openEditModal(rep); }}
                                         className="p-1.5 text-text-secondary hover:text-primary transition-colors"
                                     >
                                         <Edit size={16} />
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(rep.id, rep.full_name)}
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(rep.id, rep.full_name); }}
                                         className="p-1.5 text-text-secondary hover:text-red-500 transition-colors"
                                     >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
 
-                                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-4">
-                                    <span className="text-2xl font-black text-primary">
-                                        {rep.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                <Link href={`/representatives/${rep.id}`} className="flex flex-col items-center w-full">
+                                    <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-4 transition-transform group-hover:scale-105">
+                                        <span className="text-2xl font-black text-primary">
+                                            {rep.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-lg font-bold text-text-main dark:text-white mb-1 group-hover:text-primary transition-colors">{rep.full_name}</h3>
+                                    <p className="text-text-secondary text-sm font-medium mb-1">{rep.role}</p>
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold mb-4">
+                                        {rep.department}
                                     </span>
-                                </div>
 
-                                <h3 className="text-lg font-bold text-text-main dark:text-white mb-1">{rep.full_name}</h3>
-                                <p className="text-text-secondary text-sm font-medium mb-1">{rep.role}</p>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold mb-4">
-                                    {rep.department}
-                                </span>
-
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="text-center">
-                                        <p className="text-xl font-black text-text-main dark:text-white">{rep.total_proposals || 0}</p>
-                                        <p className="text-[10px] text-text-secondary uppercase font-bold">Teklif</p>
+                                    <div className="flex items-center gap-3 mb-4 w-full justify-center">
+                                        <div className="text-center">
+                                            <p className="text-xl font-black text-text-main dark:text-white">{rep.total_proposals || 0}</p>
+                                            <p className="text-[10px] text-text-secondary uppercase font-bold">Teklif</p>
+                                        </div>
+                                        <div className="w-px h-8 bg-border-light dark:bg-border-dark"></div>
+                                        <div className="text-center">
+                                            <p className="text-xl font-black text-green-500">{rep.approved_proposals || 0}</p>
+                                            <p className="text-[10px] text-text-secondary uppercase font-bold">Onay</p>
+                                        </div>
                                     </div>
-                                    <div className="w-px h-8 bg-border-light dark:bg-border-dark"></div>
-                                    <div className="text-center">
-                                        <p className="text-xl font-black text-green-500">{rep.approved_proposals || 0}</p>
-                                        <p className="text-[10px] text-text-secondary uppercase font-bold">Onay</p>
-                                    </div>
-                                </div>
 
-                                <div className="w-full border-t border-border-light dark:border-border-dark pt-4">
-                                    <p className="text-[10px] text-text-secondary font-bold uppercase mb-1">Toplam Satış</p>
-                                    <p className="text-lg font-black text-primary">{formatCurrency(rep.total_amount || 0)}</p>
-                                </div>
+                                    <div className="w-full border-t border-border-light dark:border-border-dark pt-4">
+                                        <p className="text-[10px] text-text-secondary font-bold uppercase mb-1">Toplam Satış</p>
+                                        <p className="text-lg font-black text-primary">{formatCurrency(rep.total_amount || 0)}</p>
+                                    </div>
+                                </Link>
 
                                 {(rep.email || rep.phone) && (
-                                    <div className="w-full border-t border-border-light dark:border-border-dark pt-4 mt-4 flex justify-center gap-3">
+                                    <div className="w-full border-t border-border-light dark:border-border-dark pt-4 mt-4 flex justify-center gap-3 z-10">
                                         {rep.phone && (
-                                            <a href={`tel:${rep.phone}`} className="w-8 h-8 rounded-full bg-background-light dark:bg-white/5 flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
+                                            <a href={`tel:${rep.phone}`} onClick={e => e.stopPropagation()} className="w-8 h-8 rounded-full bg-background-light dark:bg-white/5 flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
                                                 <Phone size={14} />
                                             </a>
                                         )}
                                         {rep.email && (
-                                            <a href={`mailto:${rep.email}`} className="w-8 h-8 rounded-full bg-background-light dark:bg-white/5 flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
+                                            <a href={`mailto:${rep.email}`} onClick={e => e.stopPropagation()} className="w-8 h-8 rounded-full bg-background-light dark:bg-white/5 flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
                                                 <Mail size={14} />
                                             </a>
                                         )}
