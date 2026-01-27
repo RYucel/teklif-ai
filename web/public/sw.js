@@ -1,4 +1,4 @@
-const CACHE_NAME = 'teklif-ai-v4-debug-' + new Date().getTime(); // Force update v4
+const CACHE_NAME = 'teklif-ai-v5-notifications-' + new Date().getTime(); // Force update v5 for notifications
 const urlsToCache = [
     '/',
     '/proposals',
