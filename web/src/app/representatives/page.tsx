@@ -49,49 +49,21 @@ export default function RepresentativesPage() {
     const fetchRepresentatives = async () => {
         setLoading(true);
 
-        // Fetch representatives
-        const { data: reps, error } = await supabase
-            .from('representatives')
-            .select('*')
-            .eq('is_active', true)
-            .order('full_name');
+        try {
+            const { data, error } = await supabase.rpc('get_representative_performance');
 
-        if (error) {
-            console.error("Error fetching representatives:", error);
-            setLoading(false);
-            return;
-        }
-
-        // Fetch proposal stats by representative_name
-        const { data: proposals } = await supabase
-            .from('proposals')
-            .select('representative_name, amount, status');
-
-        // Calculate stats per representative
-        const statsMap: Record<string, ProposalStats> = {};
-        proposals?.forEach(p => {
-            const name = p.representative_name || 'Unknown';
-            if (!statsMap[name]) {
-                statsMap[name] = { rep_name: name, count: 0, approved: 0, total: 0 };
+            if (error) {
+                console.error("Error fetching representatives:", error);
+                setLoading(false);
+                return;
             }
-            statsMap[name].count++;
-            statsMap[name].total += parseFloat(p.amount) || 0;
-            if (p.status === 'approved') statsMap[name].approved++;
-        });
 
-        // Merge stats into representatives
-        const enrichedReps = reps?.map(rep => {
-            const stats = statsMap[rep.full_name] || { count: 0, approved: 0, total: 0 };
-            return {
-                ...rep,
-                total_proposals: stats.count,
-                approved_proposals: stats.approved,
-                total_amount: stats.total
-            };
-        }) || [];
-
-        setRepresentatives(enrichedReps);
-        setLoading(false);
+            setRepresentatives(data || []);
+        } catch (err) {
+            console.error("Unexpected error:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const openAddModal = () => {

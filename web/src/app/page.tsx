@@ -39,62 +39,48 @@ export default function Home() {
   const fetchDashboardData = async () => {
     setLoading(true);
 
-    console.log("Dashboard: Fetching data...");
+    try {
+      // 1. Get Stats via RPC
+      const { data: statsData, error: statsError } = await supabase.rpc('get_dashboard_stats');
 
-    // Safety timeout to prevent infinite spinner
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.error("Dashboard: Fetch timeout reached.");
-        setLoading(false);
-      }
-    }, 10000);
+      if (statsError) throw statsError;
 
-    // Fetch all proposals
-    const { data: proposals, error, status, statusText } = await supabase
-      .from('proposals')
-      .select('*')
-      .order('created_at', { ascending: false });
+      const conversionRate = statsData.total_proposals > 0
+        ? ((statsData.approved_count / statsData.total_proposals) * 100)
+        : 0;
 
-    clearTimeout(timer);
-    console.log("Dashboard: Fetch result:", { proposals, error, status, statusText });
+      // Calculate total amount in USD (sum of all currencies for now, or just primary)
+      // Note: The RPC returns currency breakdown. For now, we sum them simply or pick USD.
+      // Ideally we should normalize, but for this quick view we sum values.
+      const breakdown = statsData.currency_breakdown || {};
+      const totalAmount = Object.values(breakdown).reduce((a: any, b: any) => a + b, 0);
 
-    if (error) {
+      setStats({
+        totalProposals: statsData.total_proposals,
+        approvedAmount: totalAmount, // This might need currency handling later
+        draftCount: statsData.draft_count,
+        approvedCount: statsData.approved_count,
+        pendingCount: statsData.pending_count,
+        rejectedCount: statsData.rejected_count,
+        conversionRate: conversionRate,
+        currencyBreakdown: breakdown
+      });
+
+      // 2. Get Recent Proposals (still fetch, but only 5)
+      const { data: recent, error: recentError } = await supabase
+        .from('proposals')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (recentError) throw recentError;
+      setRecentProposals(recent || []);
+
+    } catch (error) {
       console.error('Dashboard fetch error:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Calculate stats
-    const total = proposals?.length || 0;
-    const approved = proposals?.filter(p => p.status === 'approved') || [];
-    const draft = proposals?.filter(p => p.status === 'draft') || [];
-    const pending = proposals?.filter(p => p.status === 'sent') || [];
-    const rejected = proposals?.filter(p => p.status === 'rejected' || p.status === 'cancelled') || [];
-
-    // Currency breakdown
-    const currencyBreakdown: Record<string, number> = {};
-    proposals?.forEach(p => {
-      const curr = p.currency || 'USD';
-      currencyBreakdown[curr] = (currencyBreakdown[curr] || 0) + (parseFloat(p.amount) || 0);
-    });
-
-    // Calculate approved amount (USD primarily)
-    const approvedAmount = approved.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
-
-    setStats({
-      totalProposals: total,
-      approvedAmount,
-      draftCount: draft.length,
-      approvedCount: approved.length,
-      pendingCount: pending.length,
-      rejectedCount: rejected.length,
-      conversionRate: total > 0 ? (approved.length / total) * 100 : 0,
-      currencyBreakdown
-    });
-
-    // Recent proposals (last 5)
-    setRecentProposals(proposals?.slice(0, 5) || []);
-    setLoading(false);
   };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
