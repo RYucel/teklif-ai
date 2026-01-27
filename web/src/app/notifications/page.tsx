@@ -3,23 +3,35 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabase } from '@/lib/supabaseClient';
-import { Bell, CheckCircle, Info, Clock } from 'lucide-react';
+import { Bell, CheckCircle, Info, Clock, AlertTriangle, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
+import { subscribeUserToPush } from '@/lib/pushNotifications';
 
 interface Notification {
     id: string;
-    type: 'reminder' | 'status' | 'system';
+    type: 'reminder' | 'status_change' | 'system';
     title: string;
     message: string;
     created_at: string;
     is_read: boolean;
     user_id: string;
+    proposal_id?: string;
 }
 
 export default function NotificationsPage() {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const handleSubscribe = async () => {
+        try {
+            await subscribeUserToPush();
+            alert("Bildirimler başarıyla açıldı!");
+        } catch (error) {
+            console.error(error);
+            alert("Bildirim izni alınamadı vey hata oluştu.");
+        }
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -94,10 +106,20 @@ export default function NotificationsPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-background-dark pb-20">
+        <div className="flex flex-col h-screen bg-gray-50 dark:bg-background-dark pb-20 md:pb-0">
             <Header title="Bildirimler" />
 
-            <main className="flex-1 overflow-y-auto p-4">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-2xl font-bold text-text-main dark:text-white">Bildirimler</h1>
+                    <button
+                        onClick={handleSubscribe}
+                        className="text-xs bg-primary/10 text-primary px-3 py-2 rounded-full font-bold hover:bg-primary/20 transition-colors"
+                    >
+                        Bildirimleri Aç 🔔
+                    </button>
+                </div>
+
                 {loading ? (
                     <div className="flex justify-center items-center h-40">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
