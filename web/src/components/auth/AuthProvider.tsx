@@ -90,7 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const userProfile = await fetchProfile(currentSession.user.id);
                 if (!userProfile) {
                     console.error("User authenticated but no profile found. Forcing logout.");
-                    await signOut(); // Auto logout if no profile
+                    // Clear state immediately prevents race conditions
+                    setSession(null);
+                    setUser(null);
+                    setProfile(null);
+                    localStorage.clear();
+                    await supabase.auth.signOut().catch(() => { });
+                    setLoading(false);
+                    router.push('/login');
                     return;
                 }
                 setProfile(userProfile);

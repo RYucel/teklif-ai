@@ -59,7 +59,7 @@ export function Sidebar() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-text-main dark:text-white truncate">
-                                {profile?.full_name || 'Kullanıcı'}
+                                {profile?.full_name || profile?.email || 'Kullanıcı'}
                             </p>
                             <p className="text-xs text-text-secondary truncate">
                                 {profile?.email}
