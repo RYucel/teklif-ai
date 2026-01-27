@@ -53,7 +53,7 @@ export default function Home() {
       // Note: The RPC returns currency breakdown. For now, we sum them simply or pick USD.
       // Ideally we should normalize, but for this quick view we sum values.
       const breakdown = statsData.currency_breakdown || {};
-      const totalAmount = Object.values(breakdown).reduce((a: any, b: any) => a + b, 0);
+      const totalAmount = Object.values(breakdown).reduce((a: any, b: any) => a + (Number(b) || 0), 0) as number;
 
       setStats({
         totalProposals: statsData.total_proposals,
