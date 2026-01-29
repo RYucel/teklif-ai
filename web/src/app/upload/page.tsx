@@ -56,9 +56,16 @@ export default function UploadPage() {
             const fileName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExt}`;
             const filePath = `uploads/${fileName}`;
 
+            console.log("Starting upload to Supabase Storage:", filePath);
+
+            // Sanitize file object (Convert to Blob to avoid potential React Proxy issues)
+            const fileBody = new Blob([selectedFile], { type: selectedFile.type });
+
             const { error: uploadError, data: uploadData } = await supabase.storage
                 .from('proposals')
-                .upload(filePath, selectedFile);
+                .upload(filePath, fileBody); // Pass Blob instead of File
+
+            console.log("Upload completed. Error:", uploadError);
 
             if (uploadError) {
                 throw new Error("Dosya yüklenirken hata oluştu: " + uploadError.message);
