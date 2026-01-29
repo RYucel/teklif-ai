@@ -56,19 +56,39 @@ export default function UploadPage() {
             const fileName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExt}`;
             const filePath = `uploads/${fileName}`;
 
-            console.log("Starting upload to Supabase Storage:", filePath);
+            console.log("DEBUG: Preparing upload...");
+            console.log("DEBUG: File path:", filePath);
+            console.log("DEBUG: Original File size:", selectedFile.size);
 
-            // Sanitize file object (Convert to Blob to avoid potential React Proxy issues)
+            // Sanitize file object
             const fileBody = new Blob([selectedFile], { type: selectedFile.type });
+            console.log("DEBUG: Blob size:", fileBody.size);
 
-            const { error: uploadError, data: uploadData } = await supabase.storage
+            // Add a timeout to the upload request
+            const uploadPromise = supabase.storage
                 .from('proposals')
-                .upload(filePath, fileBody); // Pass Blob instead of File
+                .upload(filePath, fileBody, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
 
-            console.log("Upload completed. Error:", uploadError);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Upload timeout (30s)")), 30000)
+            );
+
+            console.log("DEBUG: Sending request to Supabase Storage...");
+
+            // Race the upload against a timeout
+            const result: any = await Promise.race([uploadPromise, timeoutPromise]);
+            const { error: uploadError, data: uploadData } = result;
+
+            console.log("DEBUG: Upload race finished.");
+            console.log("DEBUG: Upload Error:", uploadError);
+            console.log("DEBUG: Upload Data:", uploadData);
 
             if (uploadError) {
-                throw new Error("Dosya yüklenirken hata oluştu: " + uploadError.message);
+                console.error("Full Upload Error Object:", uploadError);
+                throw new Error("Storage Upload Error: " + (uploadError.message || JSON.stringify(uploadError)));
             }
 
             setUploadedFilePath(filePath);
