@@ -47,3 +47,11 @@ supabase/.temp/
 # Cache
 .cache/
 *.tsbuildinfo
+
+# Secrets & Keys
+teklif-ai-mobile-v1-firebase-adminsdk-fbsvc-*.json
+mobile/google-services.json
+
+# Test Scripts
+test-push.js
+.serena/

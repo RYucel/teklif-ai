@@ -9,6 +9,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
     }),
 });
 
@@ -41,51 +43,58 @@ export async function registerForPushNotificationsAsync() {
         // Get the token that uniquely identifies this device
         try {
             const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-            if (!projectId) {
-                // Fallback for dev or bare workflow if needed, though usually projectId is required
-                // console.warn('Project ID not found');
+
+            try {
+                const expoToken = (await Notifications.getExpoPushTokenAsync({
+                    projectId,
+                })).data;
+                token = expoToken;
+            } catch (expoError) {
+                // Fallback to native FCM token
+                const deviceToken = (await Notifications.getDevicePushTokenAsync()).data;
+                token = deviceToken;
             }
 
-            token = (await Notifications.getExpoPushTokenAsync({
-                projectId,
-            })).data;
-
-            console.log('Expo Push Token:', token);
-
-            // Save to Supabase
-            await saveTokenToDatabase(token);
+            if (token) {
+                await saveTokenToDatabase(token);
+            }
 
         } catch (e) {
-            console.error('Error getting push token:', e);
+            console.error('Error in notification flow:', e);
         }
     } else {
         console.log('Must use physical device for Push Notifications');
-        // alert('Must use physical device for Push Notifications');
     }
 
     return token;
 }
 
 async function saveTokenToDatabase(token: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-    // Check if subscription exists
-    const { data: existing } = await supabase
-        .from('push_subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('endpoint', token) // Reusing endpoint column for token
-        .single();
-
-    if (!existing) {
-        await supabase
+        // Check if subscription exists
+        const { data: existing, error: selectError } = await supabase
             .from('push_subscriptions')
-            .insert({
-                user_id: user.id,
-                endpoint: token, // Storing Expo token in endpoint
-                keys: { type: 'expo' }, // Marker to distinguish from web push
-                user_agent: Platform.OS + ' ' + Platform.Version
-            });
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('endpoint', token)
+            .single();
+
+        if (!existing) {
+            const { error: insertError } = await supabase
+                .from('push_subscriptions')
+                .insert({
+                    user_id: user.id,
+                    endpoint: token
+                });
+
+            if (insertError) {
+                console.error('DB Fail: Insert Error:', insertError.message);
+            }
+        }
+    } catch (e) {
+        console.error('CRITICAL DB ERROR:', (e as Error).message);
     }
 }

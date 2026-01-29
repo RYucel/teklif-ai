@@ -58,10 +58,6 @@ export default function HomeScreen() {
 
     useEffect(() => {
         fetchData();
-        // Register for push notifications
-        import('../lib/notifications').then(mod => {
-            mod.registerForPushNotificationsAsync();
-        });
     }, [fetchData]);
 
     const onRefresh = useCallback(() => {
@@ -122,6 +118,11 @@ export default function HomeScreen() {
                     full_name: profile?.full_name || 'Kullanıcı',
                     role: profile?.role || 'Satış Temsilcisi', // Fallback role
                     email: user.email
+                });
+
+                // Register for push notifications after profile is loaded
+                import('../lib/notifications').then(mod => {
+                    mod.registerForPushNotificationsAsync();
                 });
             }
         };

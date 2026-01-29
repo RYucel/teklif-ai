@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 
@@ -16,32 +16,40 @@ interface Notification {
 export default function NotificationsScreen() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        fetchNotifications();
+        let channel: any;
 
-        // Subscription for new notifications
-        const subscription = supabase
-            .channel('notifications')
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'notifications',
-                filter: `user_id=eq.${supabase.auth.getUser().then(({ data }) => data.user?.id)}` // Dynamic filter tricky in useEffect, simplifying
-            }, (payload) => {
-                const newNotification = payload.new as Notification;
-                // Add new notification to top
-                setNotifications(prev => [newNotification, ...prev]);
-            })
-            .subscribe();
+        const setupSubscription = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            channel = supabase
+                .channel(`notifications_user_${user.id}`)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${user.id}`
+                }, (payload) => {
+                    const newNotification = payload.new as Notification;
+                    setNotifications(prev => [newNotification, ...prev]);
+                })
+                .subscribe();
+        };
+
+        fetchNotifications();
+        setupSubscription();
 
         return () => {
-            subscription.unsubscribe();
+            if (channel) supabase.removeChannel(channel);
         };
     }, []);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (isRefresh = false) => {
         try {
+            if (isRefresh) setRefreshing(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
@@ -57,7 +65,12 @@ export default function NotificationsScreen() {
             console.error('Error fetching notifications:', error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        fetchNotifications(true);
     };
 
     const FormatDate = (dateString: string) => {
@@ -93,6 +106,14 @@ export default function NotificationsScreen() {
                     data={notifications}
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.listContent}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={['#13ec5b']}
+                            tintColor="#13ec5b"
+                        />
+                    }
                     renderItem={({ item }) => (
                         <View style={[styles.notificationCard, !item.is_read && styles.unread]}>
                             <View style={styles.iconContainer}>

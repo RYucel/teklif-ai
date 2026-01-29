@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import TabNavigator from './src/navigation/TabNavigator';
 import LoginScreen from './src/screens/LoginScreen';
 import { StatusBar } from 'expo-status-bar';
@@ -28,16 +29,20 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#13ec5b" />
-      </View>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f8f6' }}>
+          <ActivityIndicator size="large" color="#13ec5b" />
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar style="auto" />
-      {session && session.user ? <TabNavigator /> : <LoginScreen />}
-    </NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <StatusBar style="auto" />
+        {session && session.user ? <TabNavigator /> : <LoginScreen />}
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProposalsScreen from '../screens/ProposalsScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -8,30 +9,52 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 
+// Simple emoji-based icons to avoid SVG dependencies
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-    const icons: Record<string, string> = {
-        'Ana Sayfa': '🏠',
-        'Teklifler': '📄',
-        'Asistan': '💬',
-        'Bildirimler': '🔔',
-    };
+    let emoji = '🏠';
+    if (name === 'Teklifler') emoji = '📄';
+    if (name === 'Asistan') emoji = '💬';
+    if (name === 'Bildirimler') emoji = '🔔';
+
     return (
-        <View style={styles.iconContainer}>
-            <Text style={[styles.icon, focused && styles.iconFocused]}>{icons[name]}</Text>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 22 }}>{emoji}</Text>
         </View>
     );
 }
 
 export default function TabNavigator() {
+    const insets = useSafeAreaInsets();
+
     return (
         <Tab.Navigator
+            id="main-tabs"
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
                 tabBarActiveTintColor: '#13ec5b',
                 tabBarInactiveTintColor: '#61896f',
-                tabBarStyle: styles.tabBar,
-                tabBarLabelStyle: styles.tabLabel,
+                tabBarStyle: {
+                    backgroundColor: '#fff',
+                    borderTopWidth: 1,
+                    borderTopColor: '#dbe6df',
+                    height: 65 + insets.bottom,
+                    paddingBottom: insets.bottom + 8,
+                    paddingTop: 8,
+                    elevation: 8,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                },
+                tabBarLabelStyle: {
+                    fontSize: 11,
+                    fontWeight: '600',
+                    marginTop: 2,
+                },
+                tabBarItemStyle: {
+                    paddingVertical: 4,
+                },
             })}
         >
             <Tab.Screen name="Ana Sayfa" component={HomeScreen} />
@@ -41,29 +64,3 @@ export default function TabNavigator() {
         </Tab.Navigator>
     );
 }
-
-const styles = StyleSheet.create({
-    tabBar: {
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#dbe6df',
-        height: 60,
-        paddingBottom: 8,
-        paddingTop: 8,
-    },
-    tabLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-    },
-    iconContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    icon: {
-        fontSize: 20,
-        opacity: 0.6,
-    },
-    iconFocused: {
-        opacity: 1,
-    },
-});

@@ -27,25 +27,12 @@ export default function UploadPage() {
     const [progress, setProgress] = useState(0);
     const [formData, setFormData] = useState<ParsedData | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             startRealScan(e.target.files[0]);
         }
-    };
-
-    const convertToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                const result = reader.result as string;
-                // Remove data URL prefix (e.g., "data:application/pdf;base64,")
-                const base64 = result.split(',')[1];
-                resolve(base64);
-            };
-            reader.onerror = error => reject(error);
-        });
     };
 
     const startRealScan = async (selectedFile: File) => {
@@ -54,19 +41,33 @@ export default function UploadPage() {
         setExtractedDisplay(false);
         setProgress(10);
         setError(null);
+        setUploadedFilePath(null);
 
         try {
-            // 1. Convert file to Base64
-            setProgress(30);
-            const base64File = await convertToBase64(selectedFile);
-
-            // Check file size before sending
-            if (base64File.length > 15000000) {
-                throw new Error("Dosya çok büyük. Maksimum 10MB desteklenir.");
+            if (selectedFile.size > 15000000) {
+                throw new Error("Dosya çok büyük. Maksimum 15MB desteklenir.");
             }
 
-            // 2. Call Edge Function directly using fetch
-            setProgress(50);
+            // 1. Upload to Supabase Storage
+            setProgress(30);
+
+            // Create a clean filename
+            const fileExt = selectedFile.name.split('.').pop();
+            const fileName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
+
+            const { error: uploadError, data: uploadData } = await supabase.storage
+                .from('proposals')
+                .upload(filePath, selectedFile);
+
+            if (uploadError) {
+                throw new Error("Dosya yüklenirken hata oluştu: " + uploadError.message);
+            }
+
+            setUploadedFilePath(filePath);
+
+            // 2. Call Edge Function with file path
+            setProgress(60);
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 120000);
@@ -84,7 +85,7 @@ export default function UploadPage() {
                         'Authorization': `Bearer ${session.access_token}`
                     },
                     body: JSON.stringify({
-                        file_base64: base64File,
+                        file_path: filePath,
                         file_type: selectedFile.type
                     }),
                     signal: controller.signal
@@ -200,7 +201,7 @@ export default function UploadPage() {
                     <div className="xl:col-span-7">
                         <div className="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 opacity-90">
                             {extractedDisplay && formData ? (
-                                <ExtractionForm data={formData} file={file} />
+                                <ExtractionForm data={formData} file={file} uploadedFilePath={uploadedFilePath} />
                             ) : (
                                 <div className="h-[400px] flex flex-col items-center justify-center text-text-secondary opacity-50">
                                     {isScanning ? (
@@ -226,8 +227,8 @@ export default function UploadPage() {
     );
 }
 
-function ExtractionForm({ data, rawAiData, file }: { data: ParsedData; rawAiData?: ParsedData; file: File | null }) {
-    const { user } = useAuth();
+function ExtractionForm({ data, rawAiData, file, uploadedFilePath }: { data: ParsedData; rawAiData?: ParsedData; file: File | null; uploadedFilePath: string | null }) {
+    const { user, session } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
@@ -358,8 +359,6 @@ function ExtractionForm({ data, rawAiData, file }: { data: ParsedData; rawAiData
             }
 
             console.log("Preparing proposal insert object...");
-            // Skip PDF upload for now to speed up save (can be added later)
-            let pdfUrl = null;
 
             const insertData = {
                 department_code: deptCode,
@@ -374,7 +373,7 @@ function ExtractionForm({ data, rawAiData, file }: { data: ParsedData; rawAiData
                 proposal_content: (rawAiData as any)?.proposal_content || null,
                 payment_terms: (rawAiData as any)?.payment_terms || null,
                 status: 'draft',
-                pdf_url: pdfUrl,
+                pdf_url: uploadedFilePath, // Save the Supabase Storage path
                 // CRITICAL: representative_id MUST equal auth.uid() for RLS policy to work
                 representative_id: user?.id
             };
@@ -389,20 +388,57 @@ function ExtractionForm({ data, rawAiData, file }: { data: ParsedData; rawAiData
 
             // CRITICAL FIX: Don't use .select().single() - it requires RLS SELECT permission
             // which can cause infinite hang if RLS doesn't allow viewing the inserted row
-            const { error } = await supabase
+            // UPDATE: RLS verified to allow selecting own rows or rows where representative_id = auth.uid()
+            const { data: insertedData, error } = await supabase
                 .from('proposals')
-                .insert(insertData);
+                .insert(insertData)
+                .select('id, proposal_no')
+                .single();
 
             if (error) {
                 console.error("Supabase Insert Error:", error);
                 throw error;
             }
 
-            // INSERT succeeded - we don't need the proposal_no immediately
-            // The trigger generates it, and user can see it on the proposals list
-            console.log("Save successful!");
+            // INSERT succeeded
+            console.log("Save successful! ID:", insertedData.id);
+            setSavedProposalNo(insertedData.proposal_no);
+
+            // 4. Trigger Embedding Generation (RAG)
+            console.log("Triggering indexing...");
+
+            // We don't await this if we want to return fast, OR we await to show "Indexing..." status.
+            // User requested "Search after upload", so better to ensure it's indexed.
+            // But don't block UI too long. Let's fire and forget, or show a toast?
+            // The user just wants to know it's saved.
+            // However, debugging RAG requires knowing if it happened.
+            // Let's await it but handle errors gracefully (don't fail the whole save if indexing fails).
+
+            try {
+                const indexResponse = await fetch(
+                    'https://xjmgwfcveqvumykjvrtj.supabase.co/functions/v1/index-proposal',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session?.access_token}`
+                        },
+                        body: JSON.stringify({
+                            proposal_id: insertedData.id
+                        })
+                    }
+                );
+
+                if (!indexResponse.ok) {
+                    console.error("Indexing failed:", await indexResponse.text());
+                } else {
+                    console.log("Indexing triggered successfully");
+                }
+            } catch (indexErr) {
+                console.error("Indexing fetch error:", indexErr);
+            }
+
             setSaveSuccess(true);
-            setSavedProposalNo("(Kaydedildi)"); // Placeholder since we can't retrieve it without SELECT permission
         } catch (err: any) {
             console.error("Save Catch Error:", err);
             // Show detailed error if available
