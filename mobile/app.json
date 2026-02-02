@@ -29,8 +29,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "8b5f-dummy-placeholder-id"
+        "projectId": "38696f61-593b-47fb-a264-c4fe5f886dd9"
       }
-    }
+    },
+    "owner": "stevevaius"
   }
 }

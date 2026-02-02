@@ -26,12 +26,15 @@ interface RecentProposal {
   currency: string;
   status: string;
   created_at: string;
+  next_follow_up_date?: string;
+  representative_id?: string;
 }
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentProposals, setRecentProposals] = useState<RecentProposal[]>([]);
+  const [upcomingFollowUps, setUpcomingFollowUps] = useState<RecentProposal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,7 +81,20 @@ export default function Home() {
         .limit(5);
 
       if (recentError) throw recentError;
+
       setRecentProposals(recent || []);
+
+      // 3. Get Upcoming Follow-ups (Admins only or relevant logic)
+      const { data: followUps, error: followUpError } = await supabase
+        .from('proposals')
+        .select('*')
+        .not('next_follow_up_date', 'is', null)
+        .gte('next_follow_up_date', new Date().toISOString().split('T')[0]) // Today or future
+        .order('next_follow_up_date', { ascending: true })
+        .limit(5);
+
+      if (followUpError) throw followUpError;
+      setUpcomingFollowUps(followUps || []);
 
     } catch (error) {
       console.error('Dashboard fetch error:', error);
@@ -90,6 +106,42 @@ export default function Home() {
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     const symbols: Record<string, string> = { USD: '$', EUR: '€', TRY: '₺', GBP: '£' };
     return `${symbols[currency] || '$'}${amount.toLocaleString('tr-TR')}`;
+  };
+
+  const handleInstantReminder = async (proposal: RecentProposal) => {
+    if (!proposal.representative_id) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: proposal.representative_id,
+          type: 'reminder',
+          title: '📌 Acil Takip Hatırlatması',
+          message: `Yönetici, ${proposal.proposal_no} nolu ${proposal.customer_name} teklifi için ACİL takip notu girmenizi/güncellemenizi rica ediyor.`,
+          proposal_id: proposal.id,
+          is_read: false
+        });
+
+      if (error) throw error;
+
+      // Trigger Push Notification via Edge Function
+      const { error: pushError } = await supabase.functions.invoke('send-push', {
+        body: {
+          user_id: proposal.representative_id,
+          title: '📌 Acil Takip Hatırlatması',
+          body: `Yönetici, ${proposal.proposal_no} nolu ${proposal.customer_name} teklifi için ACİL takip notu girmenizi/güncellemenizi rica ediyor.`,
+          data: { proposalId: proposal.id }
+        }
+      });
+
+      if (pushError) console.error("Push notification failed:", pushError);
+
+      alert("Hatırlatma gönderildi!");
+    } catch (err: any) {
+      console.error("Reminder error:", err);
+      alert("Hatırlatma gönderilemedi: " + err.message);
+    }
   };
 
   const statusLabels: Record<string, { label: string; color: string }> = {
@@ -232,40 +284,83 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Recent Proposals */}
-          <div className="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark shadow-sm h-fit">
-            <div className="p-6 border-b border-border-light dark:border-border-dark">
-              <h3 className="text-text-main dark:text-white text-lg font-bold">Son Teklifler</h3>
-              <p className="text-text-secondary text-sm">En son eklenen teklifler</p>
-            </div>
-            <div className="p-4 flex flex-col divide-y divide-border-light dark:divide-border-dark">
-              {recentProposals.map(proposal => (
-                <div key={proposal.id} className="py-4 flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <FileText size={18} className="text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-primary">{proposal.proposal_no}</p>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${statusLabels[proposal.status]?.color || 'bg-gray-100'}`}>
-                        {statusLabels[proposal.status]?.label || proposal.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-text-main dark:text-white font-medium truncate">{proposal.customer_name}</p>
-                    <p className="text-[10px] text-text-secondary mt-1">{getTimeAgo(proposal.created_at)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-text-main dark:text-white">{formatCurrency(proposal.amount, proposal.currency)}</p>
-                  </div>
+
+          {/* Right Column: Recent & Follow Ups */}
+          <div className="flex flex-col gap-6">
+
+            {/* Upcoming Follow-ups Section */}
+            <div className="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark shadow-sm h-fit">
+              <div className="p-6 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+                <div>
+                  <h3 className="text-text-main dark:text-white text-lg font-bold">Yaklaşan Takipler</h3>
+                  <p className="text-text-secondary text-sm">Takip tarihi gelen teklifler</p>
                 </div>
-              ))}
-              {recentProposals.length === 0 && (
-                <p className="text-text-secondary text-center py-8">Henüz teklif yok</p>
-              )}
+                <Bell size={20} className="text-primary" />
+              </div>
+              <div className="p-4 flex flex-col divide-y divide-border-light dark:divide-border-dark">
+                {upcomingFollowUps.map(proposal => (
+                  <div key={proposal.id} className="py-4 flex gap-4 items-center">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          {new Date(proposal.next_follow_up_date!).toLocaleDateString('tr-TR')}
+                        </span>
+                        <p className="text-sm font-bold text-text-main dark:text-white truncate">{proposal.customer_name}</p>
+                      </div>
+                      <div className="flex flex-col">
+                        <p className="text-xs text-text-secondary">Teklif: #{proposal.proposal_no}</p>
+                        <p className="text-xs text-text-secondary">Temsilci: {proposal.representative_name || 'Atanmamış'}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleInstantReminder(proposal)}
+                      className="px-3 py-1.5 bg-background-light dark:bg-white/10 hover:bg-primary hover:text-white text-text-secondary text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
+                      title="Anında Hatırlat">
+                      <Bell size={14} /> Hatırlat
+                    </button>
+                  </div>
+                ))}
+                {upcomingFollowUps.length === 0 && (
+                  <p className="text-text-secondary text-center py-6">Planlanmış takip yok</p>
+                )}
+              </div>
             </div>
-            <a href="/proposals" className="m-6 mt-2 p-3 text-sm font-bold border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors text-text-main text-center block">
-              Tüm Teklifleri Görüntüle
-            </a>
+
+            {/* Recent Proposals */}
+            <div className="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark shadow-sm h-fit">
+              <div className="p-6 border-b border-border-light dark:border-border-dark">
+                <h3 className="text-text-main dark:text-white text-lg font-bold">Son Teklifler</h3>
+                <p className="text-text-secondary text-sm">En son eklenen teklifler</p>
+              </div>
+              <div className="p-4 flex flex-col divide-y divide-border-light dark:divide-border-dark">
+                {recentProposals.map(proposal => (
+                  <div key={proposal.id} className="py-4 flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <FileText size={18} className="text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-primary">{proposal.proposal_no}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${statusLabels[proposal.status]?.color || 'bg-gray-100'}`}>
+                          {statusLabels[proposal.status]?.label || proposal.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-main dark:text-white font-medium truncate">{proposal.customer_name}</p>
+                      <p className="text-[10px] text-text-secondary mt-1">{getTimeAgo(proposal.created_at)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-text-main dark:text-white">{formatCurrency(proposal.amount, proposal.currency)}</p>
+                    </div>
+                  </div>
+                ))}
+                {recentProposals.length === 0 && (
+                  <p className="text-text-secondary text-center py-8">Henüz teklif yok</p>
+                )}
+              </div>
+              <a href="/proposals" className="m-6 mt-2 p-3 text-sm font-bold border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors text-text-main text-center block">
+                Tüm Teklifleri Görüntüle
+              </a>
+            </div>
           </div>
         </div>
       </main>

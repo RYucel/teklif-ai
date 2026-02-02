@@ -39,7 +39,9 @@ export function Sidebar() {
                     {/* Navigation */}
                     <nav className="flex flex-col gap-2">
                         <NavItem href="/" icon={<LayoutDashboard size={20} />} label="Panel" active={pathname === "/"} />
-                        <NavItem href="/upload" icon={<Upload size={20} />} label="Teklif Yükle" active={pathname === "/upload"} />
+                        {isAdmin && (
+                            <NavItem href="/upload" icon={<Upload size={20} />} label="Teklif Yükle" active={pathname === "/upload"} />
+                        )}
                         {isAdmin && (
                             <NavItem href="/representatives" icon={<Users size={20} />} label="Temsilciler" active={pathname === "/representatives"} />
                         )}
@@ -68,10 +70,15 @@ export function Sidebar() {
                     </div>
 
                     {/* Action Buttons */}
-                    <Link href="/upload" className="flex w-full cursor-pointer items-center justify-center rounded-lg h-11 px-4 bg-primary text-text-main text-sm font-bold tracking-tight hover:opacity-90 transition-opacity">
-                        <PlusCircle className="mr-2" size={20} />
-                        Yeni Teklif
-                    </Link>
+                    {/* Action Buttons */}
+                    {
+                        isAdmin && (
+                            <Link href="/upload" className="flex w-full cursor-pointer items-center justify-center rounded-lg h-11 px-4 bg-primary text-text-main text-sm font-bold tracking-tight hover:opacity-90 transition-opacity">
+                                <PlusCircle className="mr-2" size={20} />
+                                Yeni Teklif
+                            </Link>
+                        )
+                    }
 
                     {/* Logout Button */}
                     <button

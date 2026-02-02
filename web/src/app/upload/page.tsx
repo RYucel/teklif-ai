@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { CloudUpload, User, Calendar, DollarSign, FileText, CheckCircle, RefreshCcw, Save, Trash, AlertCircle, Loader2, UserCheck, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useRouter } from "next/navigation";
 
 interface ParsedData {
     customer_name: string | null;
@@ -20,7 +21,8 @@ interface ParsedData {
 }
 
 export default function UploadPage() {
-    const { session } = useAuth(); // Get session for token
+    const { session, isAdmin, loading } = useAuth(); // Get session for token
+    const router = useRouter();
     const [file, setFile] = useState<File | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const [extractedDisplay, setExtractedDisplay] = useState(false);
@@ -28,6 +30,12 @@ export default function UploadPage() {
     const [formData, setFormData] = useState<ParsedData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!loading && !isAdmin) {
+            router.push('/');
+        }
+    }, [isAdmin, loading, router]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
