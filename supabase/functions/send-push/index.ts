@@ -26,10 +26,6 @@ Deno.serve(async (req) => {
         // FCM Server Key from Firebase Console
         const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
 
-        if (!fcmServerKey) {
-            console.error('FCM_SERVER_KEY not configured');
-            throw new Error('FCM_SERVER_KEY not configured. Add it in Supabase secrets.');
-        }
 
         // Fetch subscriptions for user
         const { data: subscriptions, error: subError } = await supabase
@@ -62,6 +58,10 @@ Deno.serve(async (req) => {
 
             if (isFCMToken) {
                 // Send via FCM Legacy HTTP API
+                if (!fcmServerKey) {
+                    console.error('FCM_SERVER_KEY not configured for FCM token');
+                    return { success: false, id: sub.id, type: 'fcm', error: 'FCM_SERVER_KEY_MISSING' };
+                }
                 try {
                     const fcmPayload = {
                         to: token,

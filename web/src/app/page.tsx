@@ -135,9 +135,12 @@ export default function Home() {
         }
       });
 
-      if (pushError) console.error("Push notification failed:", pushError);
-
-      alert("Hatırlatma gönderildi!");
+      if (pushError) {
+        console.error("Push notification failed:", pushError);
+        alert("Bildirim Hatası: " + (pushError.message || JSON.stringify(pushError)));
+      } else {
+        alert("Hatırlatma gönderildi!");
+      }
     } catch (err: any) {
       console.error("Reminder error:", err);
       alert("Hatırlatma gönderilemedi: " + err.message);
