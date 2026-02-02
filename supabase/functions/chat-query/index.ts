@@ -1,26 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
-// Hardcoded configuration for stability (Confirmed working pattern)
+// Hardcoded configuration for stability
 const GEMINI_API_KEY = "AIzaSyDzfERPLL25UDms-RMhvOl8ssnD31ix9Q8";
 const SUPABASE_URL = "https://xjmgwfcveqvumykjvrtj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqbWd3ZmN2ZXF2dW15a2p2cnRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5Njg2MTIsImV4cCI6MjA4NDU0NDYxMn0.2NH5wsHFV3tMWa9lzKWEQszy1mgT4ZyAVbrX5y7IWEY";
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const EMBEDDING_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent";
 
 const SYSTEM_INSTRUCTION = `
-You are a database assistant for a Proposal Management System.
-Your job is to convert natural language queries into specific parameters for a database query or explain the data.
+You are a smart assistant for a Proposal Management System.
+Your job is to classify the user's intent and extract parameters.
+
+Intents:
+1. 'rag_query': Questions about the CONTENT of proposals (e.g., "What did we offer to X?", "Does Y proposal include server maintenance?", "List items in proposal 123").
+2. 'query_proposals': Questions about METADATA or LISTING (e.g., "Show me proposals from last month", "List approved proposals").
+3. 'aggregation': Questions requiring CALCULATION (e.g., "Total sales amount", "Count of rejected proposals").
+4. 'general_chat': Greetings or irrelevant questions.
+
 Current User ID is provided. Filter by representative_id if user asks about 'my' proposals.
-Return JSON with intent: 'query_proposals', 'aggregation', 'general_chat'.
 
-Aggregations:
-- type: 'count', 'sum', 'avg'
-- field: 'amount'
-- group_by: 'status', 'customer_name', 'department_code', 'representative_id'
-
-Generic Date Ranges (calculate start_date based on today):
-- 'today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'this_year', 'last_year', 'last_7_days', 'last_30_days', 'last_3_months', 'last_6_months'
+Return JSON ONLY:
+{
+  "intent": "rag_query" | "query_proposals" | "aggregation" | "general_chat",
+  "query": "refined query for search if needed",
+  "filters": {
+    "status": "...",
+    "customer_name": "...",
+    "date_range": "today" | "last_month" | ...
+  },
+  "type": "sum" | "count" | "avg" (only for aggregation)
+}
 `;
 
 serve(async (req) => {
@@ -38,51 +49,108 @@ serve(async (req) => {
         const body = await req.json().catch(() => ({}));
         const { query, user_id, user_role } = body;
 
-        // Initialize Supabase with User Context
+        // Initialize Supabase
         const authHeader = req.headers.get('Authorization');
         const clientOptions = authHeader ? {
             global: { headers: { Authorization: authHeader } }
         } : {};
-
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, clientOptions);
 
         if (!query) {
-            return new Response(JSON.stringify({ reply: "Hello! System is online. Ask me about your proposals." }), {
+            return new Response(JSON.stringify({ reply: "Hello! Ask me about your proposals." }), {
                 headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
                 status: 200
             });
         }
 
-        // Call Gemini
-        const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        // 1. Determine Intent with Gemini
+        const intentResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 contents: [{
                     parts: [{ text: `User Query: "${query}"\nUser Role: ${user_role}\nUser ID: ${user_id}\n\n${SYSTEM_INSTRUCTION}` }]
-                }]
+                }],
+                generationConfig: { response_mime_type: "application/json" }
             })
         });
 
-        if (!geminiResponse.ok) {
-            throw new Error(`Gemini API Error: ${geminiResponse.statusText}`);
-        }
+        const intentDataRaw = await intentResponse.json();
+        const intentJsonStr = intentDataRaw.candidates?.[0]?.content?.parts?.[0]?.text;
+        const intentData = JSON.parse(intentJsonStr || "{}");
 
-        const geminiData = await geminiResponse.json();
-        const textResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+        console.log("Intent:", intentData);
 
-        // Parse JSON intent
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            return new Response(JSON.stringify({ reply: textResponse, meta: "No JSON intent found" }), {
+        // 2. Handle RAG Query (Semantic Search)
+        if (intentData.intent === 'rag_query') {
+            console.log("Executing RAG Search...");
+
+            // A. Generate Embedding for Query
+            const embeddingResponse = await fetch(`${EMBEDDING_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    content: { parts: [{ text: intentData.query || query }] }
+                })
+            });
+
+            const embeddingJson = await embeddingResponse.json();
+            const queryEmbedding = embeddingJson.embedding?.values;
+
+            if (!queryEmbedding) {
+                throw new Error("Failed to generate embedding for query");
+            }
+
+            // B. Search Vector DB via RPC
+            const { data: chunks, error: rpcError } = await supabase.rpc('match_proposal_embeddings', {
+                query_embedding: queryEmbedding,
+                match_threshold: 0.5, // Sensitivity
+                match_count: 5,       // Top 5 chunks
+                filter_representative_id: null // Can restrict to own proposals if needed
+            });
+
+            if (rpcError) {
+                console.error("RPC Error:", rpcError);
+                throw rpcError;
+            }
+
+            console.log(`Found ${chunks?.length || 0} chunks`);
+
+            // C. Generate Answer with Context
+            const contextText = chunks?.map((c: any) => `[Proposal for ${c.metadata?.customer}]: ${c.content}`).join("\n\n") || "No relevant documents found.";
+
+            const answerPrompt = `
+                You are a helpful assistant. Answer the user's question based ONLY on the following context.
+                If the answer is not in the context, say "I couldn't find that information in the proposals."
+                
+                Context:
+                ${contextText}
+                
+                Question: ${query}
+            `;
+
+            const answerResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: answerPrompt }] }]
+                })
+            });
+
+            const answerData = await answerResponse.json();
+            const finalAnswer = answerData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            return new Response(JSON.stringify({
+                reply: finalAnswer,
+                intent: 'rag_query',
+                sources: chunks?.map((c: any) => c.metadata?.customer)
+            }), {
                 headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
                 status: 200
             });
         }
 
-        const intentData = JSON.parse(jsonMatch[0]);
-
-        // Execute DB Query
+        // 3. Handle SQL / Aggregation Query (Existing Logic)
         if (intentData.intent === 'query_proposals' || intentData.intent === 'aggregation') {
             let dbQuery = supabase.from('proposals').select('*');
 
@@ -172,18 +240,23 @@ serve(async (req) => {
             });
         }
 
-        return new Response(JSON.stringify({ reply: "I understood but no action taken.", meta: intentData }), {
+        // 4. Fallback / General Chat
+        return new Response(JSON.stringify({
+            reply: "I am ready to help with your proposals. You can ask about details inside them or get summary statistics.",
+            meta: intentData
+        }), {
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
             status: 200
         });
 
     } catch (error) {
+        console.error("Function Error:", error);
         return new Response(JSON.stringify({
             error: "Function Error",
             message: error.message
         }), {
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-            status: 200 // Always return 200 to show error in frontend
+            status: 200
         });
     }
 });

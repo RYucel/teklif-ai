@@ -1,10 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-if (!GEMINI_API_KEY) {
-    throw new Error("Missing environment variable: GEMINI_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Missing environment variables: GEMINI_API_KEY, SUPABASE_URL, or SUPABASE_SERVICE_ROLE_KEY");
 }
 
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 serve(async (req) => {
@@ -16,27 +21,42 @@ serve(async (req) => {
         const body = await req.json().catch(() => null);
 
         if (!body) {
-            return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-                status: 200, // Return 200 so client can read the error message
-                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-            });
+            throw new Error("Invalid structure: Body is missing.");
         }
 
-        const { file_base64, file_type } = body;
+        let { file_base64, file_type, file_path } = body;
+
+        // If file_path is provided, download from Storage
+        if (file_path) {
+            console.log(`Downloading file from storage: ${file_path}`);
+            const { data: fileBlob, error: downloadError } = await supabase.storage
+                .from('proposals')
+                .download(file_path);
+
+            if (downloadError) {
+                console.error("Storage download error:", downloadError);
+                throw new Error(`Dosya indirilemedi: ${downloadError.message}`);
+            }
+
+            if (!fileBlob) {
+                throw new Error("Dosya içeriği boş.");
+            }
+
+            // Determine mime type from blob if not provided
+            if (!file_type) file_type = fileBlob.type || "application/pdf";
+
+            // Convert Blob to Base64
+            const arrayBuffer = await fileBlob.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            file_base64 = btoa(binary);
+        }
 
         if (!file_base64) {
-            return new Response(JSON.stringify({ error: "No file content provided (file_base64 missing)" }), {
-                status: 200,
-                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-            });
-        }
-
-        // Check file size (base64 adds ~33% overhead, so 10MB file = ~13MB base64)
-        if (file_base64.length > 15000000) {
-            return new Response(JSON.stringify({ error: "Dosya çok büyük. Maksimum 10MB desteklenir." }), {
-                status: 200,
-                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-            });
+            throw new Error("Dosya içeriği bulunamadı (file_base64 veya file_path eksik).");
         }
 
         const prompt = `
@@ -83,27 +103,24 @@ serve(async (req) => {
         const data = await response.json();
 
         if (data.error) {
-            throw new Error(data.error.message);
+            console.error("Gemini API Error:", data.error);
+            throw new Error(`Gemini AI Hatası: ${data.error.message}`);
         }
 
         const candidate = data.candidates?.[0];
         const textResponse = candidate?.content?.parts?.[0]?.text;
 
         if (!textResponse) {
-            console.error("Gemini Validation Failed. Full Response:", JSON.stringify(data));
-            // Check for safety ratings blocking the content
-            const safetyRatings = candidate?.safetyRatings;
-            if (safetyRatings) {
-                const dropped = safetyRatings.find((r: any) => r.probability !== "NEGLIGIBLE");
-                if (dropped) {
-                    throw new Error(`AI Güvenlik Filtresi: İçerik engellendi (${dropped.category}).`);
-                }
-            }
-            throw new Error("Yapay zeka geçerli bir yanıt döndüremedi. (Boş yanıt)");
+            console.error("Empty response from Gemini:", JSON.stringify(data));
+            throw new Error("Yapay zeka geçerli bir yanıt döndüremedi.");
         }
 
+        // Clean JSON
         const jsonStart = textResponse.indexOf('{');
         const jsonEnd = textResponse.lastIndexOf('}') + 1;
+        if (jsonStart === -1 || jsonEnd === -1) {
+            throw new Error("Yapay zeka yanıtı geçerli JSON formatında değil.");
+        }
         const jsonString = textResponse.substring(jsonStart, jsonEnd);
 
         const parsedData = JSON.parse(jsonString);
@@ -112,7 +129,8 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
         });
 
-    } catch (error) {
+    } catch (error: any) {
+        console.error("Edge Function Error:", error);
         return new Response(JSON.stringify({ error: error.message }), {
             status: 400,
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },

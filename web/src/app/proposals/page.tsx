@@ -181,7 +181,7 @@ export default function ProposalsPage() {
     return (
         <>
             <Header title="Teklifler" />
-            <main className="flex-1 p-4 md:p-6 md:px-10 overflow-y-auto">
+            <main className="flex-1 p-4 md:p-6 md:px-10 overflow-y-auto pb-40">
                 <div className="flex flex-col md:flex-row md:flex-wrap justify-between items-start md:items-end gap-4 mb-6 md:mb-8">
                     <div className="flex flex-col gap-1">
                         <p className="text-2xl md:text-3xl font-black leading-tight tracking-[-0.033em] text-text-main dark:text-white">Teklifler</p>
@@ -223,7 +223,7 @@ export default function ProposalsPage() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+                <div className="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -235,7 +235,7 @@ export default function ProposalsPage() {
                             <p className="text-sm">Yeni bir teklif yüklemek için "Teklif Yükle" sayfasını kullanın.</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto md:overflow-visible">
                             <table className="w-full">
                                 <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                                     <tr>
@@ -249,8 +249,10 @@ export default function ProposalsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                                    {filteredProposals.map((proposal) => {
+                                    {filteredProposals.map((proposal, index) => {
                                         const status = statusConfig[proposal.status] || statusConfig.draft;
+                                        // Open upwards if it's the last item, or one of the last 2 items if list is long enough
+                                        const isNearBottom = index === filteredProposals.length - 1 || (filteredProposals.length > 3 && index >= filteredProposals.length - 2);
                                         return (
                                             <tr key={proposal.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                                                 <td className="px-4 md:px-6 py-4">
@@ -284,7 +286,7 @@ export default function ProposalsPage() {
                                                         {status.label}
                                                     </button>
                                                     {showStatusMenu === proposal.id && (
-                                                        <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg py-1 min-w-[140px]">
+                                                        <div className={`absolute ${isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg py-1 min-w-[140px]`}>
                                                             {Object.entries(statusConfig).map(([key, conf]) => (
                                                                 <button
                                                                     key={key}
