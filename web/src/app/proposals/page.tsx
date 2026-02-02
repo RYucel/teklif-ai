@@ -45,7 +45,7 @@ const deptLabels: Record<string, string> = {
 };
 
 export default function ProposalsPage() {
-    const { user, isAdmin } = useAuth();
+    const { user, isAdmin, loading: authLoading } = useAuth();
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -54,22 +54,30 @@ export default function ProposalsPage() {
     const [followUpProposal, setFollowUpProposal] = useState<Proposal | null>(null);
 
     useEffect(() => {
-        fetchProposals();
-    }, []);
+        if (!authLoading && user) {
+            fetchProposals();
+        }
+    }, [user, authLoading]);
 
     const fetchProposals = async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('proposals')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('proposals')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error("Error fetching proposals:", error);
-        } else {
-            setProposals(data || []);
+            if (error) {
+                console.error("Error fetching proposals:", error);
+                // Optional: set an error state here to show to user
+            } else {
+                setProposals(data || []);
+            }
+        } catch (err) {
+            console.error("Unexpected error in fetchProposals:", err);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const filteredProposals = proposals.filter(p =>

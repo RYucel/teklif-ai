@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { TrendingUp, TrendingDown, Upload, CheckCircle, Bell, FileText, Loader2 } from "lucide-react";
 
 interface DashboardStats {
@@ -28,13 +29,16 @@ interface RecentProposal {
 }
 
 export default function Home() {
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentProposals, setRecentProposals] = useState<RecentProposal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (!authLoading && user) {
+      fetchDashboardData();
+    }
+  }, [user, authLoading]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
