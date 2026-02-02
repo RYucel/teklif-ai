@@ -125,25 +125,39 @@ export default function Home() {
 
       if (error) throw error;
 
-      // Trigger Push Notification via Edge Function
-      const { error: pushError } = await supabase.functions.invoke('send-push', {
-        body: {
+      // 3. Direct Fetch to Edge Function (Debug Mode)
+      // We skip supabase.functions.invoke to debug potential client issues
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) throw new Error("Oturum token'ı bulunamadı. Lütfen tekrar giriş yapın.");
+
+      const response = await fetch('https://xjmgwfcveqvumykjvrtj.supabase.co/functions/v1/send-push', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           user_id: proposal.representative_id,
           title: '📌 Acil Takip Hatırlatması',
           body: `Yönetici, ${proposal.proposal_no} nolu ${proposal.customer_name} teklifi için ACİL takip notu girmenizi/güncellemenizi rica ediyor.`,
           data: { proposalId: proposal.id }
-        }
+        })
       });
 
-      if (pushError) {
-        console.error("Push notification failed:", pushError);
-        alert("Bildirim Hatası: " + (pushError.message || JSON.stringify(pushError)));
-      } else {
-        alert("Hatırlatma gönderildi!");
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`Sunucu Hatası (${response.status}): ${responseText}`);
       }
+
+      console.log("Push result:", responseText);
+      alert("✅ Başarılı! Sunucu Yanıtı: " + responseText);
+
     } catch (err: any) {
       console.error("Reminder error:", err);
-      alert("Hatırlatma gönderilemedi: " + err.message);
+      alert("❌ HATA: " + err.message);
     }
   };
 
