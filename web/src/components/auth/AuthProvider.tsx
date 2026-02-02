@@ -35,39 +35,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
+    // Timeout helper
+    const timeoutPromise = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms));
+
     const fetchProfile = async (userId: string) => {
         setDebugStatus(`Fetching Profile: ${userId.substring(0, 5)}...`);
         try {
-            const { data, error } = await supabase
+            // Race between fetch and timeout (5s)
+            const fetchQuery = supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', userId)
                 .single();
 
+            const { data, error } = await Promise.race([
+                fetchQuery,
+                timeoutPromise(5000)
+            ]) as any;
+
             if (error) {
                 console.error('Profile fetch error:', error);
                 setDebugStatus(`Profile Error: ${error.message}`);
-                // If profile fetch fails (e.g. RLS or missing data), consider user invalid
                 return null;
             }
             return data as UserProfile;
         } catch (err) {
             console.error('Profile fetch exception:', err);
-            setDebugStatus("Profile Exception");
+            setDebugStatus("Profile Exception/Timeout");
             return null;
         }
     };
 
-    // Force sign out if we have a user but no profile after a grace period?
-    // Better: Handle in the effect.
-
     useEffect(() => {
-        // Safety timeout - force stop loading after 5 seconds
+        // Extended safety timeout (7s) to allow for slower connections
+        // This is a "last resort" fallback.
         const timeoutId = setTimeout(() => {
-            console.warn('Auth timeout reached (3s), forcing loading false');
-            setDebugStatus("Timeout Reached (3s) - Force Load");
+            console.warn('Auth global timeout reached (7s)');
+            setDebugStatus("Global Timeout (7s)");
             setLoading(false);
-        }, 3000);
+        }, 7000);
 
         setDebugStatus("Checking Session...");
         // Get initial session
@@ -77,6 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (error) {
                 console.error('GetSession error:', error);
                 setDebugStatus(`Session Error: ${error.message}`);
+                // Ensure we don't leave stale state
+                setSession(null);
+                setUser(null);
+                setProfile(null);
                 setLoading(false);
                 return;
             }
@@ -89,13 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 const userProfile = await fetchProfile(currentSession.user.id);
                 if (!userProfile) {
-                    console.error("User authenticated but no profile found. Forcing logout.");
-                    // Clear state immediately prevents race conditions
+                    console.error("User authenticated but no profile found (or timed out). Forcing logout.");
+                    setDebugStatus("Profile Missing - Logging Out");
+
+                    // Critical: Clear everything completely
                     setSession(null);
                     setUser(null);
                     setProfile(null);
                     localStorage.clear();
                     await supabase.auth.signOut().catch(() => { });
+
                     setLoading(false);
                     router.push('/login');
                     return;
@@ -104,6 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } else {
                 console.log('No active session');
                 setDebugStatus("No Active Session");
+                // Clear state to be safe
+                setSession(null);
+                setUser(null);
+                setProfile(null);
             }
 
             setLoading(false);
@@ -124,21 +141,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     setSession(null);
                     setUser(null);
                     setProfile(null);
-                } else if (newSession) {
+                    setLoading(false);
+                } else if (newSession?.user) {
                     setSession(newSession);
                     setUser(newSession.user);
-                    if (newSession.user) {
-                        const userProfile = await fetchProfile(newSession.user.id);
-                        if (!userProfile && event !== 'INITIAL_SESSION') {
-                            // Only force logout here if it's not the initial load (handled above)
-                            // Actually, let's just warn or let the UI handle empty profile
-                            console.warn("Profile missing for logged in user");
-                        }
+
+                    // Only fetch profile if we don't have it or if it's a different user
+                    // Getting it again on every event is safer to ensure sync
+                    const userProfile = await fetchProfile(newSession.user.id);
+                    if (!userProfile && event !== 'INITIAL_SESSION') {
+                        // If it fails during a session update (e.g. token refresh), 
+                        // we might want to be careful. But if profile is gone, user is invalid.
+                        console.warn("Profile check failed during auth change");
+                        // Optional: Force logout here too? 
+                        // For now, let's allow it to start 'loading' if needed or keep old profile?
+                        // Better: strict consistency.
+                    }
+                    if (userProfile) {
                         setProfile(userProfile);
                     }
+                    setLoading(false);
+                } else {
+                    // No session
+                    setLoading(false);
                 }
-
-                setLoading(false);
             }
         );
 
